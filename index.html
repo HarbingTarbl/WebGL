@@ -5,15 +5,107 @@
 <title></title>
 <title>WebGL</title>
 <script type="text/javascript" src="gl-matrix.js"></script>
-<script type="x-shader/x-fragment" id="diffuse-fs">
-        varying mediump vec3 fNormal;
+<script type="x-shader/x-vertex" id="vsm-shadow-vs">
+    attribute vec3 vPosition;
 
-        void main()
-        {
-            gl_FragColor = vec4(fNormal * 0.5 + 0.5, 1);
+    varying highp float fDepth;
+
+    uniform mat4 uProjectionMatrix;
+    uniform mat4 uViewMatrix;
+    uniform mat4 uModelMatrix;
+
+    highp float hermite(const float minV, const float maxV, highp float v)
+    {
+        return clamp((v - minV) / (maxV - minV), 0.0, 1.0);
+    }
+
+    void main()
+    {
+        vec4 p = vec4(vPosition, 1.0);
+        p = uViewMatrix * uModelMatrix * p;
+        fDepth = hermite(1.0, 20.0, p.z * -1.0);
+
+        gl_Position = uProjectionMatrix * p;
+    }
+</script>
+<script type="x-shader/x-fragment" id="vsm-shadow-fs">
+    precision highp float;
+
+    varying highp float fDepth;
+
+    void main()
+    {
+        gl_FragColor = vec4(fDepth, fDepth * fDepth, 0, 1);
+    }
+</script>
+<script type="x-shader/x-vertex" id="vsm-composite-vs">
+    attribute vec4 vPosition;
+
+    varying mediump vec2 fTex;
+    varying mediump vec2 fNDC;
+
+    void main()
+    {
+        fNDC = vPosition.xy;
+        fTex = fNDC * 0.5 + 0.5;
+
+        gl_Position = vPosition;
+    }
+
+</script>
+
+<script type="x-shader/x-fragment" id="vsm-composite-fs">
+    varying mediump vec2 fTex;
+    varying mediump vec2 fNDC;
+
+    void main()
+    {
+        gl_FragColor = vec4(1);
+    }
+
+</script>
+<script type="x-shader/x-fragment" id="diffuse-fs">
+        precision highp float;
+
+        varying highp vec3 fNormal;
+        varying highp vec3 fWorld;
+
+        uniform sampler2D sVarianceTexture;
+        uniform mat4 uVarianceViewMatrix;
+        uniform mat4 uVarianceProjectionMatrix;
+        uniform highp float uMinVariance;
+
+        highp float hermite(const highp float minV, const highp float maxV, highp float v)
+        {   
+            return clamp((v - minV) / (maxV - minV), 0.0, 1.0);
         }
 
+       
+        void main()
+        {
+            vec4 variancePoint = uVarianceViewMatrix * vec4(fWorld, 1);
+            highp float varianceZ = hermite(1.0, 50.0, variancePoint.z * -1.0); //Linear Z from Light
+            
+            variancePoint = uVarianceProjectionMatrix * variancePoint;
 
+            //varianceZ = float(varianceZ >= 1.0);
+            vec2 varianceTex = (variancePoint.xy * 0.5 + 0.5);
+
+
+
+            vec2 moments = texture2D(sVarianceTexture, vec2(gl_FragCoord) / vec2(1600, 300)).rg; //Linear Z from Light w/ depth
+            
+
+            highp float p = float(varianceZ <= moments.x);
+            highp float sig = moments.y - moments.x * moments.x;
+            sig = max(sig, uMinVariance);
+            highp float d = varianceZ - moments.x;
+            d *= d;
+            highp float pmax = sig / (sig + d);
+            //pmax = max(pmax, p);
+
+            gl_FragColor = vec4(moments, 0, 1);
+        }
 
 </script>
 <script type="x-shader/x-vertex" id="diffuse-vs">
@@ -24,18 +116,46 @@
         uniform mat4 uModelMatrix;
         uniform mat3 uNormalMatrix;
 
-        varying mediump vec3 fNormal;
+        varying highp vec3 fNormal;
+        varying highp vec3 fWorld;
 
         void main()
         {
             fNormal = uNormalMatrix * vNormal;
-            gl_Position = uCameraMatrix * uModelMatrix * vec4(vPosition, 1.0);
+            gl_Position = uModelMatrix * vec4(vPosition, 1.0);
+            fWorld = gl_Position.xyz;
+            gl_Position = uCameraMatrix * gl_Position;
         }
 
 
 </script>
 <script type="text/javascript">
 "use strict";
+
+function Quad() {
+    var vertices = new Float32Array([
+        1, 1, 0, 1
+        -1, 1, 0, 1,
+        1, -1, 0, 1,
+        -1, -1, 0, 1
+    ]);
+
+    this.vertexBuffer = gl.createBuffer();
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, null);
+
+    gl.enableVertexAttribArray(0);
+
+    this.draw = function() {
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
+        gl.vertexAttribPointer(0, 4, gl.FLOAT, false, 0, 0);
+
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    };
+}
 
 function Cube() {
     var vertices = new Float32Array([
@@ -144,51 +264,160 @@ function Plane() {
 
 function Instance(geo, transform) {
     this.modelMatrix = transform;
+    this.fixNormal = true;
+    this.geo = geo;
 
-    this.draw = function (program) {
+    this.normalMatrix = function() {
+        if(this.fixNormal) {
+            this._normalMatrix = mat3.fromMat4(mat3.create(), this.modelMatrix);
+            var t = mat3.create();
+            mat3.transpose(t, this._normalMatrix);
+            mat3.invert(this._normalMatrix, t);
 
-        var m3 = mat3.create();
-        mat3.fromMat4(m3, this.modelMatrix);
-        var inv = mat3.create();
-        mat3.invert(inv, m3);
-        mat3.transpose(m3, inv);
-        console.log(m3);
-        console.log(this.modelMatrix);
 
-        program.uniform.uNormalMatrix(m3);
-        program.uniform.uModelMatrix(this.modelMatrix);
-
-        geo.draw();
+            this.fixNormal = false;
+        }
+        return this._normalMatrix;
     };
+
+    this.translate = function(x) {
+        this.fixNormal = true;
+        mat4.translate(this.modelMatrix, this.modelMatrix, x);
+    };
+
+    this.scale = function(x) {
+        this.fixNormal = true;
+        mat4.scale(this.modelMatrix, this.modelMatrix, x);
+    };
+
+    this.rotateX = function(x) { 
+        this.fixNormal = true;
+        mat4.rotateX(this.modelMatrix, this.modelMatrix, x);
+    };
+
+    this.rotateY = function(x) {
+        this.fixNormal = true;
+        mat4.rotateY(this.modelMatrix, this.modelMatrix, x);
+    };
+
+    this.rotateZ = function(x) {
+        this.fixNormal = true;
+        mat4.rotateZ(this.modelMatrix, this.modelMatrix, x);
+    }
 }
 
 function VarianceShaderPass(width, height) {
-    var vertexSource = document.getElementById("vsm-vs");
-    var fragmentSource = document.getElementById("vsm-fs");
-    this.program = new ShaderProgram(
+
+    this.projectionMatrix = mat4.create();
+    mat4.ortho(this.projectionMatrix, -10, 10, -10, 10, 1, 50);
+    this.viewMatrix = mat4.create();
+    mat4.lookAt(this.viewMatrix, [5, 5, 5], [0,0,0], [0,1,0]);
+
+
+    this.shadowProgram = new ShaderProgram(
             {
-                vertex: vertexSource,
-                fragmengt: fragmentSource,
+                vertex: document.getElementById("vsm-shadow-vs").text,
+                fragment: document.getElementById("vsm-shadow-fs").text,
                 binds: [
                     ["vPosition", 0]
                 ]
             });
 
+    this.shadowProgram.use();
+    this.shadowProgram.uniform.uViewMatrix(this.viewMatrix);
+    this.shadowProgram.uniform.uProjectionMatrix(this.projectionMatrix);
+    gl.useProgram(null);
+
+
     this.framebufferId = gl.createFramebuffer();
     this.depthTextureId = gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D, this.depthTextureId);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE_ALPHA, width, height, 0, gl.LUMINANCE_ALPHA, gl.UNSIGNED_BYTE, null);
-    gl.texParameter(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-    gl.texParameter(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    this.depthRenderBufferId = gl.createRenderbuffer();
+    gl.bindRenderbuffer(gl.RENDERBUFFER, this.depthRenderBufferId);
+    gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, width, height);
 
+    
+    //No 16bit texture support?
+    //No 2 channel floating point texture support? (On this laptop?!)
+     //gl.generateMipmap(gl.TEXTURE_2D);
+    
+    //gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_BASE_LEVEL, 0);
+    //gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAX_LEVEL, 0);
+    
+
+    gl.bindTexture(gl.TEXTURE_2D, this.depthTextureId);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+    gl.generateMipmap(gl.TEXTURE_2D);
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.framebufferId);
+    gl.clearColor(0,0,0,1);
+    gl.clearDepth(1.0);
+
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.depthTextureId, 0);
+    gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, this.depthRenderBufferId);
 
     if (!gl.checkFramebufferStatus(gl.FRAMEBUFFER)) {
-        console.log("Invalid framebuffer");
         gl.deleteTexture(this.depthTextureId);
         gl.deleteFramebuffer(this.framebufferId);
+        console.log("Framebuffer incomplete");
+        return;
+    }
+
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.bindTexture(gl.TEXTURE_2D, null);
+    gl.bindRenderbuffer(gl.RENDERBUFFER, null);
+
+    this.startShadow = function() {
+        gl.bindFramebuffer(gl.FRAMEBUFFER, this.framebufferId);
+        gl.viewportWidth = width;
+        gl.viewportHeight = height;
+        this.shadowProgram.use();
+        this.uniform = this.shadowProgram.uniform;
+        this.sampler = this.shadowProgram.sampler;
+        gl.disable(gl.CULL_FACE);
+        gl.clear(gl.DEPTH_BUFFER_BIT | gl.COLOR_BUFFER_BIT);
+
+        this.draw = function(inst) {
+            this.shadowProgram.uniform.uModelMatrix(inst.modelMatrix);
+            inst.geo.draw();
+        };
+    };
+}
+
+function DiffuseShaderPass(width, height){
+    this.diffuseProgram = new ShaderProgram({
+        vertex: document.getElementById("diffuse-vs").text,
+        fragment: document.getElementById("diffuse-fs").text,
+        binds: [
+            ["vPosition", 0],
+            ["vNormal", 1]
+        ]
+    });
+
+
+    this.startDiffuse = function() {
+
+        //varianceMatrix = shadowMatrix
+
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+        gl.viewportWidth = width;
+        gl.viewportHeight = height;
+
+        gl.enable(gl.CULL_FACE);
+        this.diffuseProgram.use();
+        this.uniform = this.diffuseProgram.uniform;
+        this.sampler = this.diffuseProgram.sampler;
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+        this.draw = function(inst) {
+            this.diffuseProgram.uniform.uModelMatrix(inst.modelMatrix);
+            this.diffuseProgram.uniform.uNormalMatrix(inst.normalMatrix());
+            inst.geo.draw();
+        };
     }
 
 
@@ -205,7 +434,7 @@ function ShaderProgram(args) {
     gl.shaderSource(vertex, args.vertex);
     gl.compileShader(vertex);
     if (!gl.getShaderParameter(vertex, gl.COMPILE_STATUS)) {
-        console.log("could not compile vertex shader : ", gl.getShaderInfoLog(vertex));
+        console.log("could not compile vertex shader : " + args.vertex + " : " +  gl.getShaderInfoLog(vertex));
         gl.deleteShader(vertex);
         return;
     }
@@ -214,7 +443,7 @@ function ShaderProgram(args) {
     gl.shaderSource(fragment, args.fragment);
     gl.compileShader(fragment);
     if (!gl.getShaderParameter(fragment, gl.COMPILE_STATUS)) {
-        console.log("could not compile fragment shader : " + gl.getShaderInfoLog(fragment));
+        console.log("could not compile fragment shader : " + args.fragment + " : " + gl.getShaderInfoLog(fragment));
         gl.deleteShader(vertex);
         gl.deleteShader(fragment);
         return;
@@ -227,7 +456,6 @@ function ShaderProgram(args) {
     if (args.hasOwnProperty("binds")) {
         for (var i in args.binds) {
             var bind = args.binds[i];
-            console.log(bind);
             gl.bindAttribLocation(this.program, bind[1], bind[0]);
         }
     }
@@ -250,11 +478,14 @@ function ShaderProgram(args) {
     var nuniforms = gl.getProgramParameter(this.program, gl.ACTIVE_UNIFORMS);
     this.uniform = {};
     this.sampler = {};
+    var cTeId = 0;
+
+    gl.useProgram(this.program);
 
     for (var i = 0; i < nuniforms; i++) {
         var uniform = gl.getActiveUniform(this.program, i);
         uniform.location = gl.getUniformLocation(this.program, uniform.name);
-        console.log(uniform);
+  
         switch (uniform.type) {
             case gl.FLOAT_MAT4:
                 this.uniform[uniform.name] = function (a) {
@@ -298,12 +529,22 @@ function ShaderProgram(args) {
                     };
                 }(uniform);
                 break;
-            case gl.SAMPLER_2D:
-                this.sampler[uniform.name] = function (a) {
-                    return function (v) {
-                        gl.uniformi(a.location, v);
+            case gl.FLOAT:
+                this.uniform[uniform.name] = function(a) {
+                    return function(v) { 
+                        gl.uniform1f(a.location, v);
                     };
                 }(uniform);
+                break;
+
+            case gl.SAMPLER_2D:
+                gl.uniform1i(uniform.location, cTeId);   
+                this.sampler[uniform.name] = function (a) {
+                    return function (v) {
+                        gl.activeTexture(gl.TEXTURE0 + a);
+                        gl.bindTexture(gl.TEXTURE_2D, v);
+                    };
+                }(cTeId++);
                 break;
         }
     }
@@ -316,13 +557,15 @@ function ShaderProgram(args) {
 var gl = null;
 var meshes = null;
 var textures = null;
-var shaders = null;
 var instances = null;
+var extensions = null;
+var passes = null;
 
 
 var viewMatrix = mat4.create();
 var projectionMatrix = mat4.create();
 var cameraMatrix = mat4.create();
+
 
 function startWGL(canvas) {
     try {
@@ -330,20 +573,29 @@ function startWGL(canvas) {
             antialias: true,
             stencil: false,
             depth: true,
-            premultipliedAlpha: true,
+            alpha: false,
+            premultipliedAlpha: false,
             preserveDrawingBuffer: false
         });
 
+        if (!gl) {
+            alert("Could not start WebGL")
+            return;
+        }
+
         gl.viewportWidth = canvas.width;
         gl.viewportHeight = canvas.height;
+
+        gl.ext = {};
+        gl.ext.texture_float = gl.getExtension("OES_texture_float");
+        gl.ext.texture_float_linear = gl.getExtension("OES_texture_float_linear");
+
+
     } catch (excp) {
-        alert("Could not start WebGL");
+        alert("Could not start WebGL : " + excp);
     }
 
-    if (!gl) {
-        alert("Could not start WebGL")
-        return;
-    }
+
 
     gl.clearColor(0, 0, 0, 1);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -353,7 +605,8 @@ function startWGL(canvas) {
 
     meshes = {
         cube: new Cube(),
-        plane: new Plane()
+        plane: new Plane(),
+        quad: new Quad(),
     };
 
     instances = {
@@ -361,6 +614,7 @@ function startWGL(canvas) {
         floor: new Instance(meshes.plane, mat4.create()),
         southwall: new Instance(meshes.plane, mat4.create()),
         westwall: new Instance(meshes.plane, mat4.create()),
+        eastwall: new Instance(meshes.plane, mat4.create())
     };
 
 
@@ -377,6 +631,15 @@ function startWGL(canvas) {
     mat4.scale(instances.westwall.modelMatrix, instances.westwall.modelMatrix, [1, 2, 5]);
     mat4.rotateZ(instances.westwall.modelMatrix, instances.westwall.modelMatrix, -3.14 / 2);
 
+    mat4.translate(instances.eastwall.modelMatrix, instances.eastwall.modelMatrix, [5, 1, 0]);
+    mat4.scale(instances.eastwall.modelMatrix, instances.eastwall.modelMatrix, [1, 2, 5]);
+    mat4.rotateZ(instances.eastwall.modelMatrix, instances.eastwall.modelMatrix, 3.14 / 2);
+
+    instances.floor.fixNormal = true;
+    instances.cube.fixNormal = true;
+    instances.eastwall.fixNormal = true;
+    instances.westwall.fixNormal = true;
+    instances.southwall.fixNormal = true;
 
     textures = {
         cubeTexture: new createTexture("cube.png")
@@ -387,27 +650,32 @@ function startWGL(canvas) {
 
     mat4.multiply(cameraMatrix, projectionMatrix, viewMatrix);
 
-    shaders = {
-        "diffuse": new ShaderProgram({
-            vertex: document.getElementById("diffuse-vs").text,
-            fragment: document.getElementById("diffuse-fs").text,
-            binds: [
-                ["vPosition", 0],
-                ["vNormal", 1]
-            ]
-        })
+    passes = {
+        shadow: new VarianceShaderPass(4096, 4096),
+        diffuse: new DiffuseShaderPass(gl.viewportWidth, gl.viewportHeight),
     };
 
+    passes.shadow.startShadow();
+    // gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    // gl.viewportWidth = 800;
+    // gl.viewportHeight = 600;
 
-    shaders.diffuse.use();
-    shaders.diffuse.uniform.uCameraMatrix(cameraMatrix);
+    for(var inst in instances) {
+        passes.shadow.draw(instances[inst]);
+    }
 
+    passes.diffuse.startDiffuse();
+    passes.diffuse.uniform.uCameraMatrix(cameraMatrix);
+    passes.diffuse.sampler.sVarianceTexture(passes.shadow.depthTextureId);
+    passes.diffuse.uniform.uMinVariance(0.1);
+    passes.diffuse.uniform.uVarianceViewMatrix(passes.shadow.viewMatrix);
+    passes.diffuse.uniform.uVarianceProjectionMatrix(passes.shadow.projectionMatrix);
 
     for (var inst in instances) {
-        instances[inst].draw(shaders.diffuse);
+        passes.diffuse.draw(instances[inst]);   
     }
-    //instances.cube.draw(shaders.diffuse);
-}
+ 
+ }
 
 </script>
 </head>
