@@ -140,7 +140,7 @@
 
 </script>
 <script type="text/javascript">
-"use strict";
+    "use strict";
 
 function Quad() {
     var vertices = new Float32Array([
@@ -327,14 +327,18 @@ function GaussianBlurPass(width, height, radius, texformat, textype) {
     };
 
     this.ping = gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D, ping);
-    gl.texImage2D(gl.TEXTURE_2D, 0, texformat, width, height, 0, textype, null);
+    gl.bindTexture(gl.TEXTURE_2D, this.ping);
+    gl.texImage2D(gl.TEXTURE_2D, 0, texformat, width, height, 0, texformat, textype, null);
 
     this.pong = gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D, pong);
-    gl.texImage2D(gl.TEXTURE_2D, 0, texformat, width, height, 0, textype, null);
+    gl.bindTexture(gl.TEXTURE_2D, this.pong);
+    gl.texImage2D(gl.TEXTURE_2D, 0, texformat, width, height, 0, texformat, textype, null);
 
 
+
+
+    gl.bindTexture(gl.TEXTURE_2D, null);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 }
 
 function VarianceShaderPass(width, height, mipmaps) {
@@ -355,8 +359,8 @@ function VarianceShaderPass(width, height, mipmaps) {
             });
 
     this.shadowProgram.use();
-    this.shadowProgram.uniform.uViewMatrix(this.viewMatrix);
-    this.shadowProgram.uniform.uProjectionMatrix(this.projectionMatrix);
+    this.shadowProgram.uniform.uViewMatrix = this.viewMatrix;
+    this.shadowProgram.uniform.uProjectionMatrix = this.projectionMatrix;
     gl.useProgram(null);
 
 
@@ -406,7 +410,7 @@ function VarianceShaderPass(width, height, mipmaps) {
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
         this.draw = function(inst) {
-            this.shadowProgram.uniform.uModelMatrix(inst.modelMatrix);
+            this.shadowProgram.uniform.uModelMatrix = inst.modelMatrix;
             inst.geo.draw();
         };
 
@@ -446,8 +450,8 @@ function DiffuseShaderPass(width, height){
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
         this.draw = function(inst) {
-            this.diffuseProgram.uniform.uModelMatrix(inst.modelMatrix);
-            this.diffuseProgram.uniform.uNormalMatrix(inst.normalMatrix());
+            this.diffuseProgram.uniform.uModelMatrix = inst.modelMatrix;
+            this.diffuseProgram.uniform.uNormalMatrix = inst.normalMatrix();
             inst.geo.draw();
         };
     }
@@ -460,6 +464,7 @@ function createTexture(path) {
 }
 
 function ShaderProgram(args) {
+    "use strict";
     this.valid = false;
 
     var vertex = gl.createShader(gl.VERTEX_SHADER);
@@ -519,66 +524,111 @@ function ShaderProgram(args) {
   
         switch (uniform.type) {
             case gl.FLOAT_MAT4:
-                this.uniform[uniform.name] = function (a) {
-                    return function (v) {
-                        gl.uniformMatrix4fv(a.location, false, v);
+                Object.defineProperty(this.uniform, uniform.name, function(a) {
+                    return {
+                        set: function(v) {
+                            gl.uniformMatrix4fv(a.location, false, v);
+                        },
+                        get: function() {
+                            return "mat4";
+                        }
                     };
-                }(uniform);
+                }(uniform));
                 break;
             case gl.FLOAT_MAT3:
-                this.uniform[uniform.name] = function (a) {
-                    return function (v) {
-                        gl.uniformMatrix3fv(a.location, false, v);
+                Object.defineProperty(this.uniform, uniform.name, function(a){
+                    return {
+                        set: function(v) {
+                            gl.uniformMatrix3fv(a.location, false, v);
+                        },
+                        get: function() {
+                            return "mat3";
+                        }
                     };
-                }(uniform);
+                }(uniform));
                 break;
             case gl.FLOAT_MAT2:
-                this.uniform[uniform.name] = function (a) {
-                    return function (v) {
-                        gl.uniformMatrix2fv(a.location, false, v);
+                Object.defineProperty(this.uniform, uniform.name, function(a){
+                    return {
+                        set: function(v) {
+                            gl.uniformMatrix2fv(a.location, false, v);
+                        },
+                        get: function() {
+                            return "mat2";
+                        }
                     };
-                }(uniform);
+                }(uniform));
                 break;
             case gl.FLOAT_VEC4:
-                this.uniform[uniform.name] = function (a) {
-                    return function (v) {
-                        gl.uniform4fv(a.location, v);
+                Object.defineProperty(this.uniform, uniform.name, function(a){
+                    return {
+                        set: function(v){
+                            gl.uniform4fv(a.location, v);
+                        },
+                        get: function() {
+                            return "vec4";
+                        }
                     };
-                }(uniform);
+                }(uniform));
                 break;
             case gl.FLOAT_VEC3:
-                this.uniform[uniform.name] = function (a) {
-                    return function (v) {
-                        gl.uniform3fv(a.location, v);
+                Object.defineProperty(this.uniform, uniform.name, function(a){
+                    return {
+                        set: function(v){
+                            gl.uniform3fv(a.location, v);
+                        },
+                        get: function() {
+                            return "vec3";
+                        }
                     };
-                }(uniform);
+                }(uniform));
                 break;
             case gl.FLOAT_VEC2:
-                this.uniform[uniform.name] = function (a) {
-                    return function (v) {
-                        gl.uniform3fv(a.location, v);
+                Object.defineProperty(this.uniform, uniform.name, function(a){
+                    return {
+                        set: function(v){
+                            gl.uniform2fv(a.location, v);
+                        },
+                        get: function() {
+                            return "vec2";
+                        }
                     };
-                }(uniform);
+                }(uniform));
                 break;
             case gl.FLOAT:
-                this.uniform[uniform.name] = function(a) {
-                    return function(v) { 
-                        gl.uniform1f(a.location, v);
+                Object.defineProperty(this.uniform, uniform.name, function(a){
+                    return {
+                        set: function(v){
+                            gl.uniform1f(a.location, v);
+                        },
+                        get: function() {
+                            return "float";
+                        }
                     };
-                }(uniform);
+                }(uniform));
                 break;
 
             case gl.SAMPLER_2D:
-                gl.uniform1i(uniform.location, cTeId);   
-                this.sampler[uniform.name] = function (a) {
-                    return function (v) {
-                        gl.activeTexture(gl.TEXTURE0 + a);
-                        gl.bindTexture(gl.TEXTURE_2D, v);
+                gl.uniform1i(uniform.location, cTeId);  
+                Object.defineProperty(this.sampler, uniform.name, function(a){
+                    return {
+                        set: function(v){
+                            gl.activeTexture(gl.TEXTURE0 + a);
+                            gl.bindTexture(gl.TEXTURE_2D, v);
+                        },
+                        get: function(){
+                            return "sampler2D";
+                        }
                     };
-                }(cTeId++);
+                }(cTeId++));
                 break;
         }
     }
+
+    Object.freeze(this.uniform);
+    Object.freeze(this.sampler);
+
+    gl.useProgram(null);
 
     this.use = function () {
         gl.useProgram(this.program);
@@ -685,12 +735,11 @@ function startWGL(canvas) {
     passes = {
         shadow: new VarianceShaderPass(512, 512, false),
         diffuse: new DiffuseShaderPass(gl.viewportWidth, gl.viewportHeight),
-        gaussianBlur: new GaussianBlurPass(512,512, 10)
+        gaussianBlur: new GaussianBlurPass(512,512, 10, gl.RGB, gl.FLOAT)
     };
 
     passes.shadow.startShadow();
-
-    passes.shadow.uniform.uDepthBias(0.000);
+    passes.shadow.uniform.uDepthBias = 0.000;
 
     for(var inst in instances) {
         passes.shadow.draw(instances[inst]);
@@ -698,13 +747,15 @@ function startWGL(canvas) {
 
     passes.shadow.finish();
 
+
+
     passes.diffuse.startDiffuse();
-    passes.diffuse.uniform.uCameraMatrix(cameraMatrix);
-    passes.diffuse.sampler.sVarianceTexture(passes.shadow.depthTextureId);
-    passes.diffuse.uniform.uMinVariance(0.00005);
-    passes.diffuse.uniform.uVarianceViewMatrix(passes.shadow.viewMatrix);
-    passes.diffuse.uniform.uVarianceProjectionMatrix(passes.shadow.projectionMatrix);
-    passes.diffuse.uniform.uLightBleed(0.2);
+    passes.diffuse.uniform.uCameraMatrix = cameraMatrix;
+    passes.diffuse.sampler.sVarianceTexture = passes.shadow.depthTextureId;
+    passes.diffuse.uniform.uMinVariance = 0.00005;
+    passes.diffuse.uniform.uVarianceViewMatrix = passes.shadow.viewMatrix;
+    passes.diffuse.uniform.uVarianceProjectionMatrix = passes.shadow.projectionMatrix;
+    passes.diffuse.uniform.uLightBleed = 0.2;
 
     for (var inst in instances) {
         passes.diffuse.draw(instances[inst]);   
