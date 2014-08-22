@@ -5,6 +5,8 @@
 <title></title>
 <title>WebGL</title>
 <script type="text/javascript" src="gl-matrix.js"></script>
+<script type="text/javascript" src="ShaderProgram.js"></script>
+<script type="text/javascript" src="FlightCamera.js"></script>
 <script type="x-shader/x-vertex" id="vsm-shadow-vs">
     attribute vec3 vPosition;
 
@@ -44,11 +46,11 @@
     {
         vec2 dFdepth = vec2(dFdx(fDepth), dFdy(fDepth));
 
-        gl_FragColor = vec4(fDepth, fDepth * fDepth + 0.25 * dot(dFdepth, dFdepth), 0, 1);
+        gl_FragColor = vec4(fDepth, fDepth * fDepth + 0.25 * dot(dFdepth, dFdepth), fDepth, 1);
 
     }
 </script>
-<script type="x-shader/x-vertex" id="vsm-composite-vs">
+<script type="x-shader/x-vertex" id="gaussblur-vs">
     attribute vec4 vPosition;
 
     varying mediump vec2 fTex;
@@ -64,13 +66,35 @@
 
 </script>
 
-<script type="x-shader/x-fragment" id="vsm-composite-fs">
+<script type="x-shader/x-fragment" id="gaussblur-fs">
+    precision highp float;
+
     varying mediump vec2 fTex;
     varying mediump vec2 fNDC;
 
+    uniform vec2 uTexelStride;
+    uniform sampler2D sTexture;
+
+
     void main()
     {
-        gl_FragColor = vec4(1);
+        vec3 smp = texture2D(sTexture, fTex).rgb;
+        vec3 color = vec3(smp.rg * 0.2270270270, smp.b);
+
+        smp = texture2D(sTexture, fTex + 1.3846153846 * uTexelStride).rgb;
+        color.rg += smp.rg * 0.3162162162;
+        color.b = max(smp.b, color.b);
+        smp = texture2D(sTexture, fTex - 1.3846153846 * uTexelStride).rgb;
+        color.rg += smp.rg * 0.3162162162;
+        color.b = max(smp.b, color.b);
+        smp = texture2D(sTexture, fTex + 3.2307692308 * uTexelStride).rgb;
+        color.rg += smp.rg * 0.0702702703;
+        color.b = max(smp.b, color.b);
+        smp = texture2D(sTexture, fTex - 3.2307692308 * uTexelStride).rgb;
+        color.rg += smp.rg * 0.0702702703;
+        color.b = max(smp.b, color.b);
+
+        gl_FragColor.rgb = color;
     }
 
 </script>
@@ -79,12 +103,14 @@
 
         varying highp vec3 fNormal;
         varying highp vec3 fWorld;
+        varying lowp vec4 fColor;
 
         uniform sampler2D sVarianceTexture;
         uniform mat4 uVarianceViewMatrix;
         uniform mat4 uVarianceProjectionMatrix;
         uniform highp float uMinVariance;
         uniform highp float uLightBleed;
+        uniform vec3 uSunDirection;
 
         highp float hermite(const highp float minV, const highp float maxV, highp float v)
         {   
@@ -98,22 +124,30 @@
             highp float lightZ = hermite(1.0, 30.0, variancePoint.z * -1.0); //Linear Z from Light
             variancePoint = uVarianceProjectionMatrix * variancePoint;
             vec2 varianceTex = (variancePoint.xy * 0.5 + 0.5);
-            vec2 moments = texture2D(sVarianceTexture, varianceTex).rg; //Linear Z from Light w/ depth
+            vec3 moments = texture2D(sVarianceTexture, varianceTex).rgb; //Linear Z from Light w/ depth
 
             float variance = moments.y - moments.x * moments.x;
             variance = max(variance, uMinVariance);
             float delta = lightZ - moments.x;
             float coverage = 1.0;
-
             if(delta > 0.0)
             {
                 coverage = variance / (variance + delta * delta);
                 coverage = hermite(uLightBleed, 1.0, coverage);
             }
+            if(moments.z <= lightZ)
+            {
+                coverage = 0.0;
+            }
 
 
-            gl_FragColor.rgb = normalize(fNormal) * 0.5 + 0.5;
-            gl_FragColor.rgb *= max(coverage, 0.3);
+            vec3 tNormal = normalize(fNormal);
+            float diffuseCoeff = clamp(dot(tNormal, uSunDirection), 0.0, 1.0);
+
+
+
+            gl_FragColor = fColor * clamp(diffuseCoeff + 0.1, 0.0, 1.0);
+            gl_FragColor.rgb *= max(coverage, 0.15);
             //gl_FragColor.rgb = vec3(abs(delta));
         }
 
@@ -121,6 +155,7 @@
 <script type="x-shader/x-vertex" id="diffuse-vs">
         attribute vec3 vPosition;
         attribute vec3 vNormal;
+        attribute vec4 vColor;
 
         uniform mat4 uCameraMatrix;
         uniform mat4 uModelMatrix;
@@ -128,9 +163,11 @@
 
         varying highp vec3 fNormal;
         varying highp vec3 fWorld;
+        varying lowp vec4 fColor;
 
         void main()
         {
+            fColor = vColor;
             fNormal = uNormalMatrix * vNormal;
             gl_Position = uModelMatrix * vec4(vPosition, 1.0);
             fWorld = gl_Position.xyz;
@@ -144,7 +181,7 @@
 
 function Quad() {
     var vertices = new Float32Array([
-        1, 1, 0, 1
+        1, 1, 0, 1,
         -1, 1, 0, 1,
         1, -1, 0, 1,
         -1, -1, 0, 1
@@ -169,34 +206,66 @@ function Quad() {
 
 function Cube() {
     var vertices = new Float32Array([
-        -1, -1, 1,
-        1, -1, 1,
-        1, 1, 1,
-        -1, 1, 1,
-        -1, -1, -1,
-        1, -1, -1,
-        1, 1, -1,
-        -1, 1, -1
+        -1.0, -1.0,  1.0,
+        1.0, -1.0,  1.0,
+        1.0,  1.0,  1.0,
+        -1.0,  1.0,  1.0,
+        -1.0, -1.0, -1.0,
+        -1.0,  1.0, -1.0,
+        1.0,  1.0, -1.0,
+        1.0, -1.0, -1.0,
+        -1.0,  1.0, -1.0,
+        -1.0,  1.0,  1.0,
+        1.0,  1.0,  1.0,
+        1.0,  1.0, -1.0,
+        -1.0, -1.0, -1.0,
+        1.0, -1.0, -1.0,
+        1.0, -1.0,  1.0,
+        -1.0, -1.0,  1.0,
+        1.0, -1.0, -1.0,
+        1.0,  1.0, -1.0,
+        1.0,  1.0,  1.0,
+        1.0, -1.0,  1.0,
+        -1.0, -1.0, -1.0,
+        -1.0, -1.0,  1.0,
+        -1.0,  1.0,  1.0,
+        -1.0,  1.0, -1.0
     ]);
 
     var normals = new Float32Array([
-        -1, -1, 1,
-        1, -1, 1,
-        1, 1, 1,
-        -1, 1, 1,
-        -1, -1, -1,
-        1, -1, -1,
-        1, 1, -1,
-        -1, 1, -1
+        0.0,  0.0,  1.0,
+        0.0,  0.0,  1.0,
+        0.0,  0.0,  1.0,
+        0.0,  0.0,  1.0,
+        0.0,  0.0, -1.0,
+        0.0,  0.0, -1.0,
+        0.0,  0.0, -1.0,
+        0.0,  0.0, -1.0,
+        0.0,  1.0,  0.0,
+        0.0,  1.0,  0.0,
+        0.0,  1.0,  0.0,
+        0.0,  1.0,  0.0,
+        0.0, -1.0,  0.0,
+        0.0, -1.0,  0.0,
+        0.0, -1.0,  0.0,
+        0.0, -1.0,  0.0,
+        1.0,  0.0,  0.0,
+        1.0,  0.0,  0.0,
+        1.0,  0.0,  0.0,
+        1.0,  0.0,  0.0,
+        -1.0,  0.0,  0.0,
+        -1.0,  0.0,  0.0,
+        -1.0,  0.0,  0.0,
+        -1.0,  0.0,  0.0,
     ]);
 
     var indices = new Uint8Array([
-        0, 1, 2, 2, 3, 0,
-        3, 2, 6, 6, 7, 3,
-        7, 6, 5, 5, 4, 7,
-        4, 0, 3, 3, 7, 4,
-        0, 1, 5, 5, 4, 0,
-        1, 5, 6, 6, 2, 1
+        0,  1,  2,      0,  2,  3,    // front
+        4,  5,  6,      4,  6,  7,    // back
+        8,  9,  10,     8,  10, 11,   // top
+        12, 13, 14,     12, 14, 15,   // bottom
+        16, 17, 18,     16, 18, 19,   // right
+        20, 21, 22,     20, 22, 23    // left
     ]);
 
     this.vertexBuffer = gl.createBuffer();
@@ -276,6 +345,7 @@ function Instance(geo, transform) {
     this.modelMatrix = transform;
     this.fixNormal = true;
     this.geo = geo;
+    this.color = [1,1,1,1];
 
     this.normalMatrix = function() {
         if(this.fixNormal) {
@@ -326,13 +396,72 @@ function GaussianBlurPass(width, height, radius, texformat, textype) {
         gl.viewport(0, 0, width, height);
     };
 
-    this.ping = gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D, this.ping);
-    gl.texImage2D(gl.TEXTURE_2D, 0, texformat, width, height, 0, texformat, textype, null);
+    var fbF = function() {
+        var k = gl.createFramebuffer();
+        k.width = width;
+        k.height = height;
+        k.texture = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, k.texture);
+        gl.texImage2D(gl.TEXTURE_2D, 0, texformat, width, height, 0, texformat, textype, null);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 
-    this.pong = gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D, this.pong);
-    gl.texImage2D(gl.TEXTURE_2D, 0, texformat, width, height, 0, texformat, textype, null);
+
+        gl.bindFramebuffer(gl.FRAMEBUFFER, k);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, k.texture, 0);
+
+
+        if(gl.checkFramebufferStatus(gl.FRAMEBUFFER)) {
+            k.use = function() {
+                gl.bindFramebuffer(gl.FRAMEBUFFER, k);
+                gl.viewport(0, 0, width, height);
+            }
+        } else {
+            k = null;
+            globalGLError = true;
+            console.log("Invalid Gauss Framebuffer");            
+        }
+
+
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        gl.bindTexture(gl.TEXTURE_2D, null);
+        return k;
+    };
+
+    this.ping = fbF();
+    this.pong = fbF();
+
+
+    var vSource = document.getElementById("gaussblur-vs").text;
+    var fSource = document.getElementById("gaussblur-fs").text;
+
+    this.program = new ShaderProgram({
+        vertex: vSource,
+        fragment: fSource,
+        binds: [
+            ["vPosition", 0]
+        ]
+    });
+
+    this.start = function(){
+        this.program.use();
+        this.uniform = this.program.uniform;
+        this.sampler = this.program.sampler;
+        gl.disable(gl.DEPTH_TEST);
+        gl.disable(gl.CULL_FACE);
+
+        this.blit = function(a) {
+            //WebGL lacks actual framebuffer blits. Code that later.
+        };
+
+        this.finish = function() {
+            this.uniform = null;
+            this.sampler = null;
+        };
+    }
+
 
 
 
@@ -342,11 +471,13 @@ function GaussianBlurPass(width, height, radius, texformat, textype) {
 }
 
 function VarianceShaderPass(width, height, mipmaps) {
+    this.width = width;
+    this.height = height;
 
     this.projectionMatrix = mat4.create();
     mat4.ortho(this.projectionMatrix, -10, 10, -10, 10, 1, 40);
     this.viewMatrix = mat4.create();
-    mat4.lookAt(this.viewMatrix, [-10, 10, -10], [0,0,0], [0,1,0]);
+    mat4.lookAt(this.viewMatrix, sunDir, [0,0,0], [0,1,0]);
     this.mipmapsEnabled = mipmaps;
 
     this.shadowProgram = new ShaderProgram(
@@ -392,6 +523,7 @@ function VarianceShaderPass(width, height, mipmaps) {
         gl.deleteTexture(this.depthTextureId);
         gl.deleteFramebuffer(this.framebufferId);
         console.log("Framebuffer incomplete");
+        globalGLError = true;
         return;
     }
 
@@ -432,7 +564,8 @@ function DiffuseShaderPass(width, height){
         fragment: document.getElementById("diffuse-fs").text,
         binds: [
             ["vPosition", 0],
-            ["vNormal", 1]
+            ["vNormal", 1],
+            ["vColor", 2]
         ]
     });
 
@@ -452,7 +585,9 @@ function DiffuseShaderPass(width, height){
         this.draw = function(inst) {
             this.diffuseProgram.uniform.uModelMatrix = inst.modelMatrix;
             this.diffuseProgram.uniform.uNormalMatrix = inst.normalMatrix();
+            gl.vertexAttrib4fv(2, inst.color);
             inst.geo.draw();
+
         };
     }
 
@@ -463,184 +598,14 @@ function createTexture(path) {
 
 }
 
-function ShaderProgram(args) {
-    "use strict";
-    this.valid = false;
-
-    var vertex = gl.createShader(gl.VERTEX_SHADER);
-    gl.shaderSource(vertex, args.vertex);
-    gl.compileShader(vertex);
-    if (!gl.getShaderParameter(vertex, gl.COMPILE_STATUS)) {
-        console.log("could not compile vertex shader : " + args.vertex + " : " +  gl.getShaderInfoLog(vertex));
-        gl.deleteShader(vertex);
-        return;
-    }
-
-    var fragment = gl.createShader(gl.FRAGMENT_SHADER);
-    gl.shaderSource(fragment, args.fragment);
-    gl.compileShader(fragment);
-    if (!gl.getShaderParameter(fragment, gl.COMPILE_STATUS)) {
-        console.log("could not compile fragment shader : " + args.fragment + " : " + gl.getShaderInfoLog(fragment));
-        gl.deleteShader(vertex);
-        gl.deleteShader(fragment);
-        return;
-    }
-
-    this.program = gl.createProgram();
-    gl.attachShader(this.program, vertex);
-    gl.attachShader(this.program, fragment);
-
-    if (args.hasOwnProperty("binds")) {
-        for (var i in args.binds) {
-            var bind = args.binds[i];
-            gl.bindAttribLocation(this.program, bind[1], bind[0]);
-        }
-    }
-
-    gl.linkProgram(this.program);
-
-    if (!gl.getProgramParameter(this.program, gl.LINK_STATUS)) {
-        console.log("could not link program : " + gl.getProgramInfoLog(this.program));
-        gl.deleteShader(vertex);
-        gl.deleteShader(fragment);
-        gl.deleteShader(this.program);
-        return;
-    }
-
-    gl.deleteShader(vertex);
-    gl.deleteShader(fragment);
-
-    this.valid = true;
-    var nuniforms = gl.getProgramParameter(this.program, gl.ACTIVE_UNIFORMS);
-    this.uniform = {};
-    this.sampler = {};
-    var cTeId = 0;
-
-    gl.useProgram(this.program);
-
-    for (var i = 0; i < nuniforms; i++) {
-        var uniform = gl.getActiveUniform(this.program, i);
-        uniform.location = gl.getUniformLocation(this.program, uniform.name);
-  
-        switch (uniform.type) {
-            case gl.FLOAT_MAT4:
-                Object.defineProperty(this.uniform, uniform.name, function(a) {
-                    return {
-                        set: function(v) {
-                            gl.uniformMatrix4fv(a.location, false, v);
-                        },
-                        get: function() {
-                            return "mat4";
-                        }
-                    };
-                }(uniform));
-                break;
-            case gl.FLOAT_MAT3:
-                Object.defineProperty(this.uniform, uniform.name, function(a){
-                    return {
-                        set: function(v) {
-                            gl.uniformMatrix3fv(a.location, false, v);
-                        },
-                        get: function() {
-                            return "mat3";
-                        }
-                    };
-                }(uniform));
-                break;
-            case gl.FLOAT_MAT2:
-                Object.defineProperty(this.uniform, uniform.name, function(a){
-                    return {
-                        set: function(v) {
-                            gl.uniformMatrix2fv(a.location, false, v);
-                        },
-                        get: function() {
-                            return "mat2";
-                        }
-                    };
-                }(uniform));
-                break;
-            case gl.FLOAT_VEC4:
-                Object.defineProperty(this.uniform, uniform.name, function(a){
-                    return {
-                        set: function(v){
-                            gl.uniform4fv(a.location, v);
-                        },
-                        get: function() {
-                            return "vec4";
-                        }
-                    };
-                }(uniform));
-                break;
-            case gl.FLOAT_VEC3:
-                Object.defineProperty(this.uniform, uniform.name, function(a){
-                    return {
-                        set: function(v){
-                            gl.uniform3fv(a.location, v);
-                        },
-                        get: function() {
-                            return "vec3";
-                        }
-                    };
-                }(uniform));
-                break;
-            case gl.FLOAT_VEC2:
-                Object.defineProperty(this.uniform, uniform.name, function(a){
-                    return {
-                        set: function(v){
-                            gl.uniform2fv(a.location, v);
-                        },
-                        get: function() {
-                            return "vec2";
-                        }
-                    };
-                }(uniform));
-                break;
-            case gl.FLOAT:
-                Object.defineProperty(this.uniform, uniform.name, function(a){
-                    return {
-                        set: function(v){
-                            gl.uniform1f(a.location, v);
-                        },
-                        get: function() {
-                            return "float";
-                        }
-                    };
-                }(uniform));
-                break;
-
-            case gl.SAMPLER_2D:
-                gl.uniform1i(uniform.location, cTeId);  
-                Object.defineProperty(this.sampler, uniform.name, function(a){
-                    return {
-                        set: function(v){
-                            gl.activeTexture(gl.TEXTURE0 + a);
-                            gl.bindTexture(gl.TEXTURE_2D, v);
-                        },
-                        get: function(){
-                            return "sampler2D";
-                        }
-                    };
-                }(cTeId++));
-                break;
-        }
-    }
-
-    Object.freeze(this.uniform);
-    Object.freeze(this.sampler);
-
-    gl.useProgram(null);
-
-    this.use = function () {
-        gl.useProgram(this.program);
-    }
-}
-
 var gl = null;
 var meshes = null;
 var textures = null;
 var instances = null;
 var extensions = null;
 var passes = null;
+var settings = {};
+var globalGLError = false;
 
 
 var viewMatrix = mat4.create();
@@ -698,23 +663,29 @@ function startWGL(canvas) {
 
 
     instances.cube.translate([0,0.5,0]);
-
-    mat4.translate(instances.floor.modelMatrix, instances.floor.modelMatrix, [0, -1, 0]);
-    mat4.scale(instances.floor.modelMatrix, instances.floor.modelMatrix, [10, 0.5, 10]);
+    instances.cube.color = [1,0,0,1];
 
 
-    mat4.translate(instances.southwall.modelMatrix, instances.southwall.modelMatrix, [0, 1.5, -5]);
-    mat4.scale(instances.southwall.modelMatrix, instances.southwall.modelMatrix, [5.5, 2, 0.5]);
-    mat4.rotateX(instances.southwall.modelMatrix, instances.southwall.modelMatrix, 3.14 / 2);
+    instances.floor.translate([0, -1, 0]);
+    instances.floor.scale([10,0.5,10]);
+    instances.floor.color = [1,1,1,1];
+
+    instances.southwall.translate([0, 1.0, -5]);
+    instances.southwall.scale([5.5, 2, 0.5]);
+    instances.southwall.rotateX(3.14 / 2);
+    instances.southwall.color = [0.3, 0.6, 0.8, 1];
+
+    instances.westwall.translate([-5, 1.0, 0.0]);
+    instances.westwall.scale([0.5, 2, 4.75]);
+    instances.westwall.rotateZ(-3.14 / 2);
+    instances.westwall.color = [0.3, 0.6, 0.8, 1];
 
 
-    mat4.translate(instances.westwall.modelMatrix, instances.westwall.modelMatrix, [-5, 1.5, 0.25]);
-    mat4.scale(instances.westwall.modelMatrix, instances.westwall.modelMatrix, [0.5, 2, 4.75]);
-    mat4.rotateZ(instances.westwall.modelMatrix, instances.westwall.modelMatrix, -3.14 / 2);
+    instances.eastwall.translate([5, 1.0, 0.0]);
+    instances.eastwall.scale([0.5, 2, 4.75])    
+    instances.eastwall.rotateZ(3.14 / 2);
+    instances.eastwall.color = [0.8, 0.6, 0.8, 1];
 
-    mat4.translate(instances.eastwall.modelMatrix, instances.eastwall.modelMatrix, [5, 1.5, 0.25]);
-    mat4.scale(instances.eastwall.modelMatrix, instances.eastwall.modelMatrix, [0.5, 2, 4.75]);
-    mat4.rotateZ(instances.eastwall.modelMatrix, instances.eastwall.modelMatrix, 3.14 / 2);
 
     instances.floor.fixNormal = true;
     instances.cube.fixNormal = true;
@@ -726,21 +697,39 @@ function startWGL(canvas) {
 
     };
 
-    var dist = 1;
+    var dist = 0.8;
     mat4.lookAt(viewMatrix, [10.0 * dist, 10.0 * dist, 10.0 * dist], [0, 0, 0], [0, 1, 0]);
     mat4.perspective(projectionMatrix, 65.0 * 3.14 / 180, gl.viewportWidth / gl.viewportHeight, 1, 40.0);
 
     mat4.multiply(cameraMatrix, projectionMatrix, viewMatrix);
 
+    var shadowMapWidth = 1024;
+    var shadowMapHeight = 1024;
+
     passes = {
-        shadow: new VarianceShaderPass(512, 512, false),
+        shadow: new VarianceShaderPass(shadowMapWidth, shadowMapHeight, false),
         diffuse: new DiffuseShaderPass(gl.viewportWidth, gl.viewportHeight),
-        gaussianBlur: new GaussianBlurPass(512,512, 10, gl.RGB, gl.FLOAT)
-    };
+        gaussianBlur: new GaussianBlurPass(shadowMapWidth,shadowMapHeight, 10, gl.RGB, gl.FLOAT)
+    }; 
+
+    drawScene();
+ }
+
+ var sunDir = [-10, 10, -10];
+
+ function drawScene() {
+    if(globalGLError)
+        return;
+
+    requestAnimationFrame(drawScene);
+
+    vec3.transformMat4(sunDir, sunDir, mat4.rotateY(mat4.create(), mat4.create(), 0.01));
 
     passes.shadow.startShadow();
-    passes.shadow.uniform.uDepthBias = 0.000;
-
+    mat4.lookAt(passes.shadow.viewMatrix, sunDir, [0,0,0], [0,1,0]);
+    passes.shadow.uniform.uViewMatrix = passes.shadow.viewMatrix;
+    passes.shadow.uniform.uDepthBias = document.getElementById("uDepthBias").value;
+    
     for(var inst in instances) {
         passes.shadow.draw(instances[inst]);
     }
@@ -748,24 +737,72 @@ function startWGL(canvas) {
     passes.shadow.finish();
 
 
+    passes.gaussianBlur.start();
+    passes.gaussianBlur.ping.use();
+    passes.gaussianBlur.uniform.uTexelStride = [1.0 / passes.shadow.width, 0.0];
+    passes.gaussianBlur.sampler.sTexture = passes.shadow.depthTextureId;
+    meshes.quad.draw();
+
+    passes.gaussianBlur.pong.use();
+    passes.gaussianBlur.uniform.uTexelStride = [0.0, 1.0 / passes.shadow.height];
+    passes.gaussianBlur.sampler.sTexture = passes.gaussianBlur.ping.texture;
+    meshes.quad.draw();
+
+    passes.gaussianBlur.ping.use();
+    passes.gaussianBlur.uniform.uTexelStride = [1.0 / passes.shadow.width, 0.0];
+    passes.gaussianBlur.sampler.sTexture = passes.shadow.depthTextureId;
+    meshes.quad.draw();
+
+    passes.gaussianBlur.pong.use();
+    passes.gaussianBlur.uniform.uTexelStride = [0.0, 1.0 / passes.shadow.height];
+    passes.gaussianBlur.sampler.sTexture = passes.gaussianBlur.ping.texture;
+    meshes.quad.draw();
+
 
     passes.diffuse.startDiffuse();
     passes.diffuse.uniform.uCameraMatrix = cameraMatrix;
-    passes.diffuse.sampler.sVarianceTexture = passes.shadow.depthTextureId;
-    passes.diffuse.uniform.uMinVariance = 0.00005;
+    passes.diffuse.sampler.sVarianceTexture = passes.gaussianBlur.pong.texture;
+    passes.diffuse.uniform.uMinVariance = document.getElementById("uMinVariance").value;
     passes.diffuse.uniform.uVarianceViewMatrix = passes.shadow.viewMatrix;
     passes.diffuse.uniform.uVarianceProjectionMatrix = passes.shadow.projectionMatrix;
-    passes.diffuse.uniform.uLightBleed = 0.2;
+    passes.diffuse.uniform.uLightBleed = document.getElementById("uLightBleed").value;
+
+
+
+
+    var  v = vec3.create();
+    vec3.normalize(v, sunDir);
+    passes.diffuse.uniform.uSunDirection = v;
 
     for (var inst in instances) {
         passes.diffuse.draw(instances[inst]);   
     }
- 
  }
 
 </script>
 </head>
 <body onload="startWGL(document.getElementById('canvas'))">
-<canvas id="canvas" width="800" height="600" style="border: none;"></canvas>
+<canvas id="canvas" width="800" height="600" style="border: none; float:left;"></canvas>
+<table style="float:right; width:600px;">
+<tr>
+<td>
+<label>Min Variance</label>
+<input label="Min Variance" type="range" step="0.0001" min="-0.01" max="0.01" id="uMinVariance" onchange="console.log(this.value)" style="width:600px"/>
+</td>
+</tr>
+<tr>
+<td>
+<label>Light Bleeding</label>
+<input label="Light Bleeding" type="range" step="0.001" min="0" max="1" id="uLightBleed" onchange="console.log(this.value)" style="width:600px"/>
+</td>
+</tr>
+<tr>
+<td>
+<label>Depth Bias</label>
+<input label="Depth Bias" type="range" step="0.001", min="-0.1" max="0.1" id="uDepthBias" onchange="console.log(this.value)" style="width:600px"/>
+</td>
+</tr>
+</table>
+
 </body>
 </html>
