@@ -4,10 +4,76 @@
 <meta charset="UTF-8">
 <title></title>
 <title>WebGL</title>
-<script type="text/javascript" src="gl-matrix.js"></script>
-<script type="text/javascript" src="ShaderProgram.js"></script>
-<script type="text/javascript" src="FlightCamera.js"></script>
-<script type="text/javascript" src="PrimitiveMeshes.js"></script>
+</head>
+<body onload="startWGL(document.getElementById('canvas'))">
+<canvas id="canvas" width="800" height="600" style="border: none; float:left;"></canvas>
+<table style="float:right; width:600px;">
+<tr>
+<td>
+<label>Min Variance</label>
+<input label="Min Variance" type="range" step="0.0001" min="-0.01" max="0.01" id="uMinVariance" onchange="console.log(this.value)" style="width:600px"/>
+</td>
+</tr>
+<tr>
+<td>
+<label>Light Bleeding</label>
+<input label="Light Bleeding" type="range" step="0.001" min="0" max="1" id="uLightBleed" onchange="console.log(this.value)" style="width:600px"/>
+</td>
+</tr>
+<tr>
+<td>
+<label>Depth Bias</label>
+<input label="Depth Bias" type="range" step="0.001", min="-0.1" max="0.1" id="uDepthBias" onchange="console.log(this.value)" style="width:600px"/>
+</td>
+</tr>
+</table>
+
+<script type="x-shader/x-vertex" id="shadowmap-adaptive-bias-vs">
+    attribute vec3 vPosition;
+    varying highp float fDepth;
+
+    uniform mat4 uProjectionMatrix;
+    uniform mat4 uViewMatrix;
+    uniform mat4 uModelMatrix;
+
+    uniform float uNearZ;
+    uniform float uFarZ;
+
+    highp float hermite(const float minV, const float maxV, highp float v)
+    {
+        return clamp((v - minV) / (maxV - minV), 0.0, 1.0);
+    }
+
+    void main()
+    {
+        vec4 pPos = vec4(vPosition, 1.0);
+        pPos = uViewMatrix * uModelMatrix * pPos;
+        fDepth = hermite(uNearZ, uFarZ, pPos.z * -1);
+        gl_Position = uProjectionMatrix * pPos;
+    }
+
+</script>
+<script type="x-shader/x-fragment" id="shadowmap-adaptive-bias-fs">
+    varying highp float fDepth;
+
+
+
+    vec4 EncodeFloatRGBA(float v)
+    {
+        vec4 enc = vec4(1.0, 255.0, 65025.0, 160581375.0) * v;
+        enc = frac(enc);
+        enc -= enc.yzww * vec4(1.0/255.0,1.0/255.0,1.0/255.0,0.0);
+        return enc;
+    }
+
+
+
+    void main()
+    {
+        gl_FragColor = EncodeFloatRGBA(enc);
+    }
+
+</script>
 <script type="x-shader/x-vertex" id="vsm-shadow-vs">
     attribute vec3 vPosition;
 
@@ -114,11 +180,11 @@
         uniform vec3 uSunDirection;
 
         highp float hermite(const highp float minV, const highp float maxV, highp float v)
-        {   
+        {
             return clamp((v - minV) / (maxV - minV), 0.0, 1.0);
         }
 
-       
+
         void main()
         {
             vec4 variancePoint = uVarianceViewMatrix * vec4(fWorld, 1);
@@ -177,229 +243,32 @@
 
 
 </script>
+
+
+
+<script type="text/javascript" src="gl-matrix.js"></script>
+<script type="text/javascript" src="ShaderProgram.js"></script>
+<script type="text/javascript" src="FlightCamera.js"></script>
+<script type="text/javascript" src="PrimitiveMeshes.js"></script>
+<script type="text/javascript" src="ShadowMapAdaptiveBiasPass.js"></script>
+<script type="text/javascript" src="DiffuseColorPass.js"></script>
+<script type="text/javascript" src="VarianceShadowPass.js"></script>
+<script type="text/javascript" src="GaussianBlurPass.js"></script>
+
 <script type="text/javascript">
-    "use strict";
-
-
-function GaussianBlurPass(width, height, radius, texformat, textype) {
-    this.kernelRadius = radius;
-    this.framebuffer = gl.createFramebuffer();
-    this.framebuffer.width = width;
-    this.framebuffer.height = height;
-    this.framebuffer.use = function() {
-        gl.bindFramebuffer(gl.FRAMEBUFFER, this.framebuffer);
-        gl.viewport(0, 0, width, height);
-    };
-
-    var fbF = function() {
-        var k = gl.createFramebuffer();
-        k.width = width;
-        k.height = height;
-        k.texture = gl.createTexture();
-        gl.bindTexture(gl.TEXTURE_2D, k.texture);
-        gl.texImage2D(gl.TEXTURE_2D, 0, texformat, width, height, 0, texformat, textype, null);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-
-
-        gl.bindFramebuffer(gl.FRAMEBUFFER, k);
-        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, k.texture, 0);
-
-
-        if(gl.checkFramebufferStatus(gl.FRAMEBUFFER)) {
-            k.use = function() {
-                gl.bindFramebuffer(gl.FRAMEBUFFER, k);
-                gl.viewport(0, 0, width, height);
-            }
-        } else {
-            k = null;
-            globalGLError = true;
-            console.log("Invalid Gauss Framebuffer");            
-        }
-
-
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-        gl.bindTexture(gl.TEXTURE_2D, null);
-        return k;
-    };
-
-    this.ping = fbF();
-    this.pong = fbF();
-
-
-    var vSource = document.getElementById("gaussblur-vs").text;
-    var fSource = document.getElementById("gaussblur-fs").text;
-
-    this.program = new ShaderProgram({
-        vertex: vSource,
-        fragment: fSource,
-        binds: [
-            ["vPosition", 0]
-        ]
-    });
-
-    this.start = function(){
-        this.program.use();
-        this.uniform = this.program.uniform;
-        this.sampler = this.program.sampler;
-        gl.disable(gl.DEPTH_TEST);
-        gl.disable(gl.CULL_FACE);
-
-        this.blit = function(a) {
-            //WebGL lacks actual framebuffer blits. Code that later.
-        };
-
-        this.finish = function() {
-            this.uniform = null;
-            this.sampler = null;
-        };
-    };
-
-    gl.bindTexture(gl.TEXTURE_2D, null);
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-}
-
-function VarianceShaderPass(width, height, mipmaps) {
-    this.width = width;
-    this.height = height;
-
-    this.projectionMatrix = mat4.create();
-    mat4.ortho(this.projectionMatrix, -10, 10, -10, 10, 1, 40);
-    this.viewMatrix = mat4.create();
-    mat4.lookAt(this.viewMatrix, sunDir, [0,0,0], [0,1,0]);
-    this.mipmapsEnabled = mipmaps;
-
-    this.shadowProgram = new ShaderProgram(
-            {
-                vertex: document.getElementById("vsm-shadow-vs").text,
-                fragment: document.getElementById("vsm-shadow-fs").text,
-                binds: [
-                    ["vPosition", 0]
-                ]
-            });
-
-    this.shadowProgram.use();
-    this.shadowProgram.uniform.uViewMatrix = this.viewMatrix;
-    this.shadowProgram.uniform.uProjectionMatrix = this.projectionMatrix;
-    gl.useProgram(null);
-
-
-    this.framebufferId = gl.createFramebuffer();
-    this.depthTextureId = gl.createTexture();
-    this.depthRenderBufferId = gl.createRenderbuffer();
-    gl.bindRenderbuffer(gl.RENDERBUFFER, this.depthRenderBufferId);
-    gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, width, height);
-
-    gl.bindTexture(gl.TEXTURE_2D, this.depthTextureId);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, width, height, 0, gl.RGB, gl.FLOAT, null);
-    if(this.mipmapsEnabled)
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
-    else
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    gl.generateMipmap(gl.TEXTURE_2D);
-
-
-    gl.bindFramebuffer(gl.FRAMEBUFFER, this.framebufferId);
-
-    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.depthTextureId, 0);
-    gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, this.depthRenderBufferId);
-
-    if (!gl.checkFramebufferStatus(gl.FRAMEBUFFER)) {
-        gl.deleteTexture(this.depthTextureId);
-        gl.deleteFramebuffer(this.framebufferId);
-        console.log("Framebuffer incomplete");
-        globalGLError = true;
-        return;
-    }
-
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    gl.bindTexture(gl.TEXTURE_2D, null);
-    gl.bindRenderbuffer(gl.RENDERBUFFER, null);
-
-    this.startShadow = function() {
-        gl.bindFramebuffer(gl.FRAMEBUFFER, this.framebufferId);
-        gl.viewport(0, 0, width, height);
-        this.shadowProgram.use();
-        this.uniform = this.shadowProgram.uniform;
-        this.sampler = this.shadowProgram.sampler;
-        gl.disable(gl.CULL_FACE);
-        gl.enable(gl.DEPTH_TEST);
-        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
-        this.draw = function(inst) {
-            this.shadowProgram.uniform.uModelMatrix = inst.modelMatrix;
-            inst.geo.draw();
-        };
-
-        if(this.mipmapsEnabled) {
-            this.finish = function () {
-                gl.bindTexture(gl.TEXTURE_2D, this.depthTextureId);
-                gl.generateMipmap(gl.TEXTURE_2D);
-            };
-        }
-        else {
-            this.finish = function(){};
-        }
-    };
-}
-
-
-
-function DiffuseShaderPass(width, height){
-    this.diffuseProgram = new ShaderProgram({
-        vertex: document.getElementById("diffuse-vs").text,
-        fragment: document.getElementById("diffuse-fs").text,
-        binds: [
-            ["vPosition", 0],
-            ["vNormal", 1],
-            ["vColor", 2]
-        ]
-    });
-
-
-    this.startDiffuse = function() {
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-        gl.viewport(0, 0, width, height);
-
-        this.diffuseProgram.use();
-        this.uniform = this.diffuseProgram.uniform;
-        this.sampler = this.diffuseProgram.sampler;
-
-        gl.disable(gl.CULL_FACE);
-        gl.enable(gl.DEPTH_TEST);
-        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
-        this.draw = function(inst) {
-            this.diffuseProgram.uniform.uModelMatrix = inst.modelMatrix;
-            this.diffuseProgram.uniform.uNormalMatrix = inst.normalMatrix();
-            gl.vertexAttrib4fv(2, inst.color);
-            inst.geo.draw();
-
-        };
-    }
-}
-
+"use strict";
 
 var gl = null;
 var meshes = null;
-var textures = null;
 var instances = null;
 var extensions = null;
 var passes = null;
 var settings = {};
 var globalGLError = false;
 
-
 var viewMatrix = mat4.create();
 var projectionMatrix = mat4.create();
 var cameraMatrix = mat4.create();
-
 
 function startWGL(canvas) {
     try {
@@ -470,7 +339,7 @@ function startWGL(canvas) {
 
 
     instances.eastwall.translate([5, 1.0, 0.0]);
-    instances.eastwall.scale([0.5, 2, 4.75])    
+    instances.eastwall.scale([0.5, 2, 4.75])
     instances.eastwall.rotateZ(3.14 / 2);
     instances.eastwall.color = [0.8, 0.6, 0.8, 1];
 
@@ -480,10 +349,6 @@ function startWGL(canvas) {
     instances.eastwall.fixNormal = true;
     instances.westwall.fixNormal = true;
     instances.southwall.fixNormal = true;
-
-    textures = {
-
-    };
 
     var dist = 0.8;
     mat4.lookAt(viewMatrix, [10.0 * dist, 10.0 * dist, 10.0 * dist], [0, 0, 0], [0, 1, 0]);
@@ -495,17 +360,17 @@ function startWGL(canvas) {
     var shadowMapHeight = 1024;
 
     passes = {
-        shadow: new VarianceShaderPass(shadowMapWidth, shadowMapHeight, false),
-        diffuse: new DiffuseShaderPass(gl.viewportWidth, gl.viewportHeight),
+        shadow: new VarianceShadowPass(shadowMapWidth, shadowMapHeight, false),
+        diffuse: new DiffuseColorPass(gl.viewportWidth, gl.viewportHeight),
         gaussianBlur: new GaussianBlurPass(shadowMapWidth,shadowMapHeight, 10, gl.RGB, gl.FLOAT)
-    }; 
+    };
 
     drawScene();
- }
+}
 
- var sunDir = [-10, 10, -10];
+var sunDir = [-10, 10, -10];
 
- function drawScene() {
+function drawScene() {
     if(globalGLError)
         return;
 
@@ -517,7 +382,7 @@ function startWGL(canvas) {
     mat4.lookAt(passes.shadow.viewMatrix, sunDir, [0,0,0], [0,1,0]);
     passes.shadow.uniform.uViewMatrix = passes.shadow.viewMatrix;
     passes.shadow.uniform.uDepthBias = document.getElementById("uDepthBias").value;
-    
+
     for(var inst in instances) {
         passes.shadow.draw(instances[inst]);
     }
@@ -563,34 +428,11 @@ function startWGL(canvas) {
     passes.diffuse.uniform.uSunDirection = v;
 
     for (var inst in instances) {
-        passes.diffuse.draw(instances[inst]);   
+        passes.diffuse.draw(instances[inst]);
     }
- }
+}
 
 </script>
-</head>
-<body onload="startWGL(document.getElementById('canvas'))">
-<canvas id="canvas" width="800" height="600" style="border: none; float:left;"></canvas>
-<table style="float:right; width:600px;">
-<tr>
-<td>
-<label>Min Variance</label>
-<input label="Min Variance" type="range" step="0.0001" min="-0.01" max="0.01" id="uMinVariance" onchange="console.log(this.value)" style="width:600px"/>
-</td>
-</tr>
-<tr>
-<td>
-<label>Light Bleeding</label>
-<input label="Light Bleeding" type="range" step="0.001" min="0" max="1" id="uLightBleed" onchange="console.log(this.value)" style="width:600px"/>
-</td>
-</tr>
-<tr>
-<td>
-<label>Depth Bias</label>
-<input label="Depth Bias" type="range" step="0.001", min="-0.1" max="0.1" id="uDepthBias" onchange="console.log(this.value)" style="width:600px"/>
-</td>
-</tr>
-</table>
 
 </body>
 </html>
