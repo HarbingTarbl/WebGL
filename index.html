@@ -28,6 +28,84 @@
 </tr>
 </table>
 
+
+
+<script type="x-shader/x-vertex" id="shadowmap-adaptive-bias-scene-vs">
+attribute vec3 vPosition;
+attribute vec3 vNormal;
+attribute vec3 vColor;
+
+varying vec3 fNormal;
+varying vec4 fColor;
+varying vec3 fWorld;
+
+uniform mat4 uModelMatrix;
+uniform mat4 uCameraMatrix;
+uniform mat3 uNormalMatrix;
+
+void main()
+{
+    vec4 p = vec4(vPosition, 1.0);
+    p = uModelMatrix * p;
+    fWorld = p.xyz;
+    gl_Position = uCameraMatrix * p;
+
+
+    fDepth = hermite(uNearZ, uFarZ, p.z * -1.0);
+    fColor = vColor;
+    fNormal = uNormalMatrix * vNormal;
+}
+
+
+</script>
+<script type="x-shader/x-fragment" id="shadowmap-adaptive-bias-scene-fs">
+
+varying vec3 fNormal;
+varying vec4 fColor;
+varying vec3 fWorld;
+
+uniform mat4 uShadowProjectionMatrix;
+uniform mat4 uShadowViewMatrix;
+
+uniform sampler2D sShadowTexture;
+
+uniform float uNearZ;
+uniform float uFarZ;
+
+uniform vec3 uLightDirection;
+
+
+highp float hermite(const float minV, const float maxV, highp float v)
+{
+    return clamp((v - minV) / (maxV - minV), 0.0, 1.0);
+}
+
+float DecodeFloatRGBA(vec4 rgba)
+{
+    return dot(rgba, vec4(1.0, 1.0 / 255.0, 1.0 / 65025.0, 1.0 / 160581375.0));
+}
+
+void main()
+{
+    vec4 shadowPosition = vec4(fWorld, 1.0);
+    shadowPosition = uShadowViewMatrix * shadowPosition;
+
+    float worldZ = hermite(uNearZ, uFarZ, shadowPosition.z * -1);
+    shadowPosition = uShadowProjectionMatrix * shadowPosition;
+    shadowPosition.xy /= shadowPosition.w;
+    shadowPosition.xy *= 0.5;
+    shadowPosition.xy += 0.5;
+
+    float shadowZ = DecodeFloatRGBA(textuer2D(sShadowTexture, shadowPosition.xy));
+
+    vec3 tNormal = normalize(fNormal);
+    float diffuseTerm = clamp(dot(tNormal, uLightDirection), 0.0, 1.0);
+
+    return float(shadowZ > worldZ) * diffuseTerm * fColor;
+}
+
+
+</script>
 <script type="x-shader/x-vertex" id="shadowmap-adaptive-bias-vs">
     attribute vec3 vPosition;
     varying highp float fDepth;

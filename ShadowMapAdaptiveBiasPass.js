@@ -41,7 +41,7 @@ function ShadowMapAdaptiveBiasPass(width, height) {
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
-    this.program = new ShaderProgram({
+    this.shadowProgram = new ShaderProgram({
         vertex: document.querySelector("#shadowmap-adaptive-bias-vs").text,
         fragment: document.querySelector("#shadowmap-adaptive-bias-fs").text,
         binds:[
@@ -49,12 +49,44 @@ function ShadowMapAdaptiveBiasPass(width, height) {
         ]
     });
 
-    this.use = function(){
+    this.diffuseProgram = new ShaderProgram({
+        vertex: document.querySelector("#shadowmap-adaptive-bias-scene-vs").text,
+        fragment: document.querySelector("#shadowmap-adapative-bias-scene-fs").text,
+        binds: [
+            ["vPosition", 0],
+            ["vNormal", 1],
+            ["vColor", 2]
+        ]
+    });
+
+
+
+
+    this.startShadow = function() {
         this.framebuffer.use();
-        this.program.use();
+        this.shadowProgram.use();
+
+        this.uniform = this.shadowProgram.uniform;
+        this.sampler = this.shadowProgram.sampler;
+
+        this.finish = function() {
+            this.uniform = null;
+            this.sampler = null;
+        };
     };
 
-    this.uniform = this.program.uniform;
-    this.sampler = this.program.sampler;
+    this.startDiffuse = function() {
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        gl.viewport(0, 0, this.canvasWidth, this.canvasHeight);
+        this.diffuseProgram.use();
+
+        this.uniform = this.diffuseProgram.uniform;
+        this.sampler = this.diffuseProgram.sampler;
+
+        this.finish = function() {
+            this.uniform = null;
+            this.sampler = null;
+        };
+    }
 
 }
