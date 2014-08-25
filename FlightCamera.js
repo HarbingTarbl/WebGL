@@ -55,17 +55,18 @@ function FlightCamera(args) {
 	Object.defineProperty(this, "viewMatrix", function(that) {
 		return {
 			get: function() {
-				if(that._viewMatrix.recalc){
-					that.orientation.rotateX(q, hAngle);
-					that.orientation.rotateY(q, vAngle);
+				if(that._viewMatrix.recalc) {
+                    that.orientation.rotateX(q, hAngle);
+                    that.orientation.rotateY(q, vAngle);
 
-					mat4.fromRotationTranslation(that._viewMatrix, q, that._position);
-					mat4.inverse(that._viewMatrix.inverse, that._viewMatrix);
-					mat4.transpose(that._viewMatrix.inverse, that._viewMatrix.inverse);
+                    mat4.fromRotationTranslation(that._viewMatrix, q, that._position);
+                    mat4.inverse(that._viewMatrix.inverse, that._viewMatrix);
+                    mat4.transpose(that._viewMatrix.inverse, that._viewMatrix.inverse);
 
 
-					vec3.transformMat4(that.forward, [0,0,-1], that._viewMatrix.inverse);
-				}
+                    vec3.transformMat4(that.forward, [0, 0, -1], that._viewMatrix.inverse);
+
+                }
 
 				return that._viewMatrix;
 			}
