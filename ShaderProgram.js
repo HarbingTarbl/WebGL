@@ -146,7 +146,18 @@ function ShaderProgram(args) {
                     };
                 }(uniform));
                 break;
-
+            case gl.INT:
+                Object.defineProperty(this.uniform, uniform.name, function(a){
+                    return {
+                        set: function(v){
+                            gl.uniform1i(a.location, v);
+                        },
+                        get: function() {
+                            return "int"
+                        }
+                    };
+                }(uniform));
+                break;
             case gl.SAMPLER_2D:
                 gl.uniform1i(uniform.location, cTeId);  
                 Object.defineProperty(this.sampler, uniform.name, function(a){

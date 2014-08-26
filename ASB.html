@@ -5,36 +5,414 @@
 <title></title>
 <title>Adaptive Shadow Bias (SSM)</title>
 <style>
-canvas {
-	width: auto;
-	height: auto;
-	margin: auto;
+
+* {
+	margin: 0px;
+}
+
+
+body, canvas {
+	width: 80%;
+	height: 80%;
 }
 
 </style>
 </head>
 <body onload="startWebGL()">
 <canvas id="canvas"/>
-</body>
+
 
 <script type="text/javascript" src="gl-matrix.js"></script>
 <script type="text/javascript" src="PrimitiveMeshes.js"></script>
+<script type="text/javascript" src="FlightCamera.js"></script>
+<script type="text/javascript" src="BoundingVolume.js"></script>
+<script type="text/javascript" src="SimpleScene.js"></script>
+<script type="text/javascript" src="ShaderProgram.js"></script>
+<script type="x-shader/fragment" id="textureBlit-fs">
 
+precision highp float;
+
+varying vec2 fTexture;
+
+uniform vec2 uTextureSize;
+uniform sampler2D sTexture;
+uniform int uTextureMode;
+uniform int uSamplerMode;
+
+float DecodeFloatRGBA(vec4 rgba)
+{
+    return dot(rgba, vec4(1.0, 1.0 / 255.0, 1.0 / 65025.0, 1.0 / 160581375.0));
+}
+
+float Texture2DLinear(sampler2D texture, vec2 uv, vec2 texSize)
+{
+	vec2 f = uv / texSize;
+	vec2 k = fract(f);
+	f = (f - k + 0.5) * texSize;
+
+	float tl = DecodeFloatRGBA(texture2D(texture, f));
+	float tr = DecodeFloatRGBA(texture2D(texture, f + vec2(texSize.x, 0.0)));
+	float bl = DecodeFloatRGBA(texture2D(texture, f + vec2(0.0, texSize.y)));
+	float br = DecodeFloatRGBA(texture2D(texture, f + texSize));
+
+	//k.y = 1.0 - k.y;
+
+	float x1 = mix(tl, bl, k.y);
+	float x2 = mix(tr, br, k.y);
+	return mix(x1, x2, k.x);
+}
+
+void main()
+{
+	if(uTextureMode == 0)
+	{
+		if(uSamplerMode == 1)
+		{	
+			gl_FragColor = vec4(Texture2DLinear(sTexture, fTexture, uTextureSize));
+		}
+		else if(uSamplerMode == 0)
+		{
+			gl_FragColor = texture2D(sTexture, fTexture);
+		}
+		else
+		{
+			gl_FragColor = vec4(0.8, 0, 0.8, 1.0);
+		}
+		
+	}
+	else if(uTextureMode == 1)
+	{
+		if(uSamplerMode == 1)
+		{
+			gl_FragColor = vec4(Texture2DLinear(sTexture, fTexture, uTextureSize));
+		}
+		else if(uSamplerMode == 0)
+		{
+			gl_FragColor = vec4(DecodeFloatRGBA(texture2D(sTexture, fTexture)));	
+		}
+		else
+		{
+			gl_FragColor = vec4(0.8, 0, 0.8, 1.0);
+		}
+		
+	}
+	else
+	{
+		gl_FragColor = vec4(0.8, 0, 0.8, 1.0);
+	}
+}
+
+</script>
+<script type="x-shader/vertex" id="textureBlit-vs">
+attribute vec4 vPosition;
+
+varying vec2 fTexture;
+
+void main()
+{
+	fTexture = vPosition.xy * 0.5 + 0.5;
+	gl_Position = vPosition;
+}
+
+</script>
+<script type="x-shader/fragment" id="shadowMap-fs">
+precision highp float;
+uniform float uDepthBias;
+
+vec4 EncodeFloatRGBA(float v)
+{
+    vec4 enc = vec4(1.0, 255.0, 65025.0, 160581375.0) * v;
+    enc = fract(enc);
+    enc -= enc.yzww * vec4(1.0/255.0,1.0/255.0,1.0/255.0,0.0);
+    return enc;
+}
+
+void main()
+{
+	gl_FragColor = EncodeFloatRGBA(gl_FragCoord.z); 	
+}
+
+
+</script>
+<script type="x-shader/vertex" id="shadowMap-vs">
+attribute vec3 vPosition;
+
+uniform mat4 uMVPMatrix;
+
+void main()
+{
+	gl_Position = uMVPMatrix * vec4(vPosition, 1.0);
+}
+
+</script>
+<script type="x-shader/vertex" id="scene-vs">
+attribute vec3 vPosition;
+attribute vec3 vNormal;
+
+varying vec3 fNormal;
+varying vec3 fWorld;
+
+uniform mat4 uVPMatrix;
+uniform mat4 uMMatrix;
+uniform mat3 uNormalMatrix;
+
+void main()
+{
+	gl_Position = uMMatrix * vec4(vPosition, 1.0);
+	fWorld = gl_Position.xyz;
+	gl_Position = uVPMatrix * gl_Position;
+	fNormal = uNormalMatrix * vNormal;
+}
+
+</script>
+<script type="x-shader/fragment" id="scene-fs">
+precision highp float;
+
+varying vec3 fNormal;
+varying vec3 fWorld;
+
+uniform mat4 uShadowMatrix;
+uniform sampler2D sShadowTexture;
+uniform vec2 uShadowSize;
+
+uniform vec3 uLightDirection;
+uniform vec3 uLightColor;
+
+float DecodeFloatRGBA(vec4 rgba)
+{
+    return dot(rgba, vec4(1.0, 1.0 / 255.0, 1.0 / 65025.0, 1.0 / 160581375.0));
+}
+
+float Texture2DDecodeFloatRGBALinear(vec2 uv)
+{
+	vec2 f = uv / uShadowSize;
+	vec2 k = fract(f);
+	f = (f - k + 0.5) * uShadowSize;
+
+	float tl = DecodeFloatRGBA(texture2D(sShadowTexture, f));
+	float tr = DecodeFloatRGBA(texture2D(sShadowTexture, f + vec2(uShadowSize.x, 0.0)));
+	float bl = DecodeFloatRGBA(texture2D(sShadowTexture, f + vec2(0.0, uShadowSize.y)));
+	float br = DecodeFloatRGBA(texture2D(sShadowTexture, f + uShadowSize));
+
+	float x1 = mix(tl, bl, k.y);
+	float x2 = mix(tr, br, k.y);
+	return mix(x1, x2, k.x);
+}
+
+
+void main()
+{
+	vec3 tNormal = normalize(fNormal);
+	float lambert = clamp(dot(tNormal, uLightDirection), 0.0, 1.0);
+
+	vec4 shadowPos = uShadowMatrix * vec4(fWorld, 1.0);
+	shadowPos.xyz /= shadowPos.w;
+	shadowPos.xyz *= 0.5;
+	shadowPos.xyz += 0.5;
+
+	float shadowZ = Texture2DDecodeFloatRGBALinear(shadowPos.xy);
+
+
+	gl_FragColor = vec4(clamp(0.1 + lambert * max(float(shadowZ > shadowPos.z), 0.1), 0.0, 1.0));
+}
+
+</script>
 <script type="text/javascript">
+"use strict";
 var gl = null;
 var globalGLError = false;
+var scene = null;
+var shadowPass = null;
+var blitPass = null;
+var scenePass = null;
+var sunPosition = null;
+
+function BlitTexture(width, height) {
+	this.framebuffer = {};
+	this.framebuffer.width = width;
+	this.framebuffer.height = height;
+	this.framebuffer.use = function() {
+		gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+		gl.viewport(0,0,width, height);
+	};
+
+	this.program = new ShaderProgram({
+		vertex: document.querySelector("#textureBlit-vs").text,
+		fragment: document.querySelector("#textureBlit-fs").text,
+		binds: [
+			["vPosition", 0]
+		]
+	});
+
+	this.quad = new Quad();
+
+	this.start = function() {
+		this.framebuffer.use();
+		this.program.use();
+		gl.disable(gl.DEPTH_TEST);
+		gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+	};
+
+	this.finish = function() {
+		
+	};
+
+	this.uniform = this.program.uniform;
+	this.sampler = this.program.sampler;
+}
+
+function ScenePass(width, height){
+	this.width = width;
+	this.height = height;
+
+	this.framebuffer = {
+		width: width,
+		height: height
+	};
+
+	this.framebuffer.use = function(){
+		gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+		gl.viewport(0,0,this.width, this.height);
+	};
+
+	this.program = new ShaderProgram({
+		vertex: document.querySelector("#scene-vs").text,
+		fragment: document.querySelector("#scene-fs").text,
+		binds: [
+			["vPosition", 0],
+			["vNormal", 1],
+			["vColor", 2]
+		]
+	});
+
+	this.vpMatrix = mat4.create();
+	this.mvpMatrix = mat4.create();
+
+	this.uniform = this.program.uniform;
+	this.sampler = this.program.sampler;
+
+	this.start = function(scene){
+		this.framebuffer.use();
+		this.program.use();
+		mat4.mul(this.vpMatrix, scene.projectionMatrix, scene.viewMatrix);
+		this.program.uniform.uVPMatrix = this.vpMatrix;
+		gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+		gl.cullFace(gl.BACK);
+	};
+
+	this.draw = function(inst){
+		this.uniform.uMMatrix = inst.modelMatrix;
+		this.uniform.uNormalMatrix = inst.normalMatrix();
+		inst.geo.draw();
+	};
+
+	this.finish = function(){
+
+	};
+}
+
+function ShadowPass(size){
+	this.width = size;
+	this.height = size;
+
+	this.framebuffer = gl.createFramebuffer();	
+	this.framebuffer.width = size;
+	this.framebuffer.height = size;
+	this.framebuffer.use = function() {
+		gl.bindFramebuffer(gl.FRAMEBUFFER, this);
+		gl.viewport(0,0, this.width, this.height);
+	};
+
+
+	this.shadowTexture = gl.createTexture();
+	gl.bindTexture(gl.TEXTURE_2D, this.shadowTexture);
+	gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, size, size, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+	gl.generateMipmap(gl.TEXTURE_2D);
+
+	this.depthbuffer = gl.createRenderbuffer();
+	gl.bindRenderbuffer(gl.RENDERBUFFER, this.depthbuffer);
+	gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, size, size);
+
+
+	gl.bindFramebuffer(gl.FRAMEBUFFER, this.framebuffer);
+	gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.shadowTexture, 0);
+	gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, this.depthbuffer);
+
+	if(!gl.checkFramebufferStatus(gl.FRAMEBUFFER)){
+		console.log("Could not create shadow pass framebuffer");
+		globalGLError = true;
+		return;
+	}
+	gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+	gl.bindRenderbuffer(gl.RENDERBUFFER, null);
+	gl.bindTexture(gl.TEXTURE_2D, null);
+
+	this.program = new ShaderProgram({
+		vertex: document.querySelector("#shadowMap-vs").text,
+		fragment: document.querySelector("#shadowMap-fs").text,
+		binds: [
+			["vPosition", 0]
+		]
+	});
+
+	this.start = function() {
+		this.framebuffer.use();
+		this.program.use();
+		mat4.mul(this.shadowMatrix, this.projectionMatrix, this.viewMatrix);
+		gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+		gl.cullFace(gl.FRONT);
+	};
+
+	this.finish = function() {
+		//gl.colorMask(true, true, true, true);
+	};
+
+	this.mvpMatrix = mat4.create();
+
+
+	this.uniform = this.program.uniform;
+	this.sampler = this.program.sampler;
+
+		
+	this.viewMatrix = mat4.create();
+	mat4.lookAt(this.viewMatrix, [-10, 10, -10], [0,0,0], [0,1,0]);
+	this.projectionMatrix = mat4.create();
+	mat4.ortho(this.projectionMatrix, -10, 10, -10, 10, 1.0, 60.0);
+
+	this.shadowMatrix = mat4.create();
+	mat4.mul(this.shadowMatrix, this.projectionMatrix, this.viewMatrix);
+
+	this.draw = function(inst) {
+		mat4.mul(this.mvpMatrix, this.shadowMatrix, inst.modelMatrix);
+		this.uniform.uMVPMatrix = this.mvpMatrix;
+		inst.geo.draw();
+	};
+};
 
 function startWebGL() {
+	var canvas = document.querySelector("#canvas");
+	var scale = window.devicePixelRatio || 1;
+	canvas.width = canvas.clientWidth * scale;
+	canvas.height = canvas.clientHeight * scale;
+	console.log(canvas.width, " ", canvas.height);
+
+
 	try {
-		var canvas = document.querySelector("#canvas");
 		gl = canvas.getContext("webgl", {
-      		antialias: false,
+      		antialias: true,
             stencil: false,
             depth: true,
             alpha: false,
             premultipliedAlpha: false,
             preserveDrawingBuffer: false
 		});
+
+		gl.ext = {};
+		gl.ext.depth24 = gl.getExtension("WEBGL_depth_texture");
 
 		if(!gl) {
 			alert("Could not load WebGL");
@@ -45,21 +423,64 @@ function startWebGL() {
 		return;
 	}
 
-	gl.clearColor(0,0,0,1);
+	scene = new SimpleScene();
+	shadowPass = new ShadowPass(2048);
+	blitPass = new BlitTexture(canvas.width, canvas.height);
+	scenePass = new ScenePass(canvas.width, canvas.height);
 
+	sunPosition = [-10, 10, -10];
+
+
+	gl.clearColor(0,0,0,1);
+	gl.enable(gl.DEPTH_TEST);
+	gl.enable(gl.CULL_FACE);
 	requestAnimationFrame(draw);
 }
+
 
 function draw() {
 	if(globalGLError)
 		return;
 
-	gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+    vec3.transformMat4(sunPosition, sunPosition, mat4.rotateY(mat4.create(), mat4.create(), 0.01));
+
+	mat4.lookAt(shadowPass.viewMatrix, sunPosition, [0,0,0], [0,1,0]);
+	shadowPass.start();
+	shadowPass.uniform.uMVPMatrix = shadowPass.shadowMatrix;
+	for(var i in scene.instances) {
+		shadowPass.draw(scene.instances[i]);
+	}
+	shadowPass.finish();
+
+
+	scenePass.start(scene);
+	scenePass.uniform.uShadowSize = [1.0 / shadowPass.width, 1.0 / shadowPass.height];
+	scenePass.uniform.uShadowMatrix = shadowPass.shadowMatrix;
+	var k = vec3.create();
+	vec3.normalize(k, sunPosition);
+	scenePass.uniform.uLightDirection = k;
+	scenePass.sampler.sShadowTexture = shadowPass.shadowTexture;
+	for(var i in scene.instances) {
+		scenePass.draw(scene.instances[i]);
+	}
+	scenePass.finish();
+
+
+
+	// blitPass.start();
+	// //blitPass.sampler.sTexture = shadowPass.depthTexture;
+	// blitPass.sampler.sTexture = shadowPass.shadowTexture;
+	// blitPass.uniform.uSamplerMode = 1;
+	// blitPass.uniform.uTextureMode = 1;
+	// blitPass.uniform.uTextureSize = [1.0 / shadowPass.width, 1.0 / shadowPass.height];
+	// blitPass.quad.draw();
+	// blitPass.finish();
 
 	requestAnimationFrame(draw);
 }
 
 
 </script>
+</body>
 </html>

@@ -7,11 +7,11 @@ function SimpleScene() {
     };
 
     this.instances = {
-        cube: new Instance(meshes.cube, mat4.create()),
-        floor: new Instance(meshes.cube, mat4.create()),
-        southwall: new Instance(meshes.cube, mat4.create()),
-        westwall: new Instance(meshes.cube, mat4.create()),
-        eastwall: new Instance(meshes.cube, mat4.create())
+        cube: new Instance(this.meshes.cube, mat4.create()),
+        floor: new Instance(this.meshes.cube, mat4.create()),
+        southwall: new Instance(this.meshes.cube, mat4.create()),
+        westwall: new Instance(this.meshes.cube, mat4.create()),
+        eastwall: new Instance(this.meshes.cube, mat4.create())
     };
 
 
