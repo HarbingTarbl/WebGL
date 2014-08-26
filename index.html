@@ -499,8 +499,6 @@ function drawScene() {
     passes.diffuse.uniform.uLightBleed = document.getElementById("uLightBleed").value;
 
 
-
-
     var  v = vec3.create();
     vec3.normalize(v, sunDir);
     passes.diffuse.uniform.uSunDirection = v;

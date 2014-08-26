@@ -78,18 +78,20 @@ function BoundingVolume(center, extents) {
 		points[6] = vec4.fromValues(max[0], max[1], min[2], 1);
 		points[7] = vec4.fromValues(max[0], max[1], max[2], 1);
 
+
+		vec4.transformMat4(points[0], points[0], transform);
 		for(var i = 0; i < 3; i++) {
 			min[i] = max[i] = points[0][i];
 		}
 
-		for(var i = 0; i < 8; i++) {
-			vec4.transformMat4(points[0], points[0], transform);
+		for(var i = 1; i < 8; i++) {
+			vec4.transformMat4(points[i], points[i], transform);
 			for(var k = 0; k < 3; k++) {
 				points[i][k] /= points[i][3];
 			}
 			
-			vec3.min(min, min, points[0]);
-			vec3.max(max, max, points[0]);
+			vec3.min(min, min, points[i]);
+			vec3.max(max, max, points[i]);
 		}
 
 		var center = vec3.create();
@@ -103,4 +105,7 @@ function BoundingVolume(center, extents) {
 		this.extents[2] = max[2] - this.center[2];
 	};
 
+	this.copy = function() {
+		return new BoundingVolume([this.center[0], this.center[1], this.center[2]], [this.extents[0], this.extents[1], this.extents[2]]);
+	};
 };

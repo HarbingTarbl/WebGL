@@ -171,6 +171,9 @@ function Instance(geo, transform) {
     this.fixNormal = true;
     this.geo = geo;
     this.color = [1,1,1,1];
+    this.bounds = new BoundingVolume([0,0,0], [1,1,1]);
+
+
 
     this.normalMatrix = function() {
         if(this.fixNormal) {
@@ -208,5 +211,10 @@ function Instance(geo, transform) {
     this.rotateZ = function(x) {
         this.fixNormal = true;
         mat4.rotateZ(this.modelMatrix, this.modelMatrix, x);
-    }
+    };
+
+    this.update = function(){
+        this.bounds = new BoundingVolume([0,0,0], [1,1,1]);
+        this.bounds.transform(this.modelMatrix);
+    };
 }

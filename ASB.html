@@ -178,6 +178,11 @@ uniform vec2 uShadowSize;
 uniform vec3 uLightDirection;
 uniform vec3 uLightColor;
 
+uniform float uNear;
+uniform float uFar;
+uniform float uSceneScale;
+uniform float uKConst;
+
 float DecodeFloatRGBA(vec4 rgba)
 {
     return dot(rgba, vec4(1.0, 1.0 / 255.0, 1.0 / 65025.0, 1.0 / 160581375.0));
@@ -199,10 +204,20 @@ float Texture2DDecodeFloatRGBALinear(vec2 uv)
 	return mix(x1, x2, k.x);
 }
 
+float AdaptiveEpsilon(float depth)
+{
+	float kf = (uFar - uNear);
+	float ke = kf * kf;
+	kf *= uFar * uNear;
+
+	return uKConst * uSceneScale * (uFar - depth * ke) / kf;
+}
 
 void main()
 {
 	vec3 tNormal = normalize(fNormal);
+
+
 	float lambert = clamp(dot(tNormal, uLightDirection), 0.0, 1.0);
 
 	vec4 shadowPos = uShadowMatrix * vec4(fWorld, 1.0);
@@ -210,8 +225,11 @@ void main()
 	shadowPos.xyz *= 0.5;
 	shadowPos.xyz += 0.5;
 
-	float shadowZ = Texture2DDecodeFloatRGBALinear(shadowPos.xy);
+	//vec2 shadowRay = (floor(shadowPos.xy / uShadowSize) + 0.5) * uShadowSize * 2 - 1;
 
+
+	float shadowZ = Texture2DDecodeFloatRGBALinear(shadowPos.xy);
+	shadowPos.z += AdaptiveEpsilon(shadowZ);
 
 	gl_FragColor = vec4(clamp(0.1 + lambert * max(float(shadowZ > shadowPos.z), 0.1), 0.0, 1.0));
 }
@@ -364,10 +382,11 @@ function ShadowPass(size){
 		this.program.use();
 		mat4.mul(this.shadowMatrix, this.projectionMatrix, this.viewMatrix);
 		gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-		gl.cullFace(gl.FRONT);
+		gl.disable(gl.CULL_FACE);
 	};
 
 	this.finish = function() {
+		gl.enable(gl.CULL_FACE);
 		//gl.colorMask(true, true, true, true);
 	};
 
@@ -444,8 +463,13 @@ function draw() {
 
 
     vec3.transformMat4(sunPosition, sunPosition, mat4.rotateY(mat4.create(), mat4.create(), 0.01));
-
 	mat4.lookAt(shadowPass.viewMatrix, sunPosition, [0,0,0], [0,1,0]);
+
+	var k = scene.bounds.copy();
+	k.transform(shadowPass.viewMatrix);
+
+	mat4.ortho(shadowPass.projectionMatrix, k.left(), k.right(), k.bottom(), k.top(), k.front() * -1, k.back() * -1);
+
 	shadowPass.start();
 	shadowPass.uniform.uMVPMatrix = shadowPass.shadowMatrix;
 	for(var i in scene.instances) {
@@ -457,6 +481,10 @@ function draw() {
 	scenePass.start(scene);
 	scenePass.uniform.uShadowSize = [1.0 / shadowPass.width, 1.0 / shadowPass.height];
 	scenePass.uniform.uShadowMatrix = shadowPass.shadowMatrix;
+	scenePass.uniform.uNear = k.front() * -1;
+	scenePass.uniform.uFar = k.back() * -1;
+	scenePass.uniform.uSceneScale = vec3.distance(k.min(), k.max());
+	scenePass.uniform.uKConst = 0.0006;
 	var k = vec3.create();
 	vec3.normalize(k, sunPosition);
 	scenePass.uniform.uLightDirection = k;
