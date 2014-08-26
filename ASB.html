@@ -4,17 +4,64 @@
 <meta charset="UTF-8">
 <title></title>
 <title>Adaptive Shadow Bias (SSM)</title>
+<style>
+canvas {
+	width: auto;
+	height: auto;
+	margin: auto;
+}
+
+</style>
 </head>
 <body onload="startWebGL()">
-<canvas id="#canvas" style="width:auto; height:auto" />
+<canvas id="canvas"/>
 </body>
 
 <script type="text/javascript" src="gl-matrix.js"></script>
+<script type="text/javascript" src="PrimitiveMeshes.js"></script>
+
 <script type="text/javascript">
+var gl = null;
+var globalGLError = false;
+
+function startWebGL() {
+	try {
+		var canvas = document.querySelector("#canvas");
+		gl = canvas.getContext("webgl", {
+      		antialias: false,
+            stencil: false,
+            depth: true,
+            alpha: false,
+            premultipliedAlpha: false,
+            preserveDrawingBuffer: false
+		});
+
+		if(!gl) {
+			alert("Could not load WebGL");
+			return;
+		}
+	} catch(ex) {
+		alert(ex);
+		return;
+	}
+
+	gl.clearColor(0,0,0,1);
+
+	requestAnimationFrame(draw);
+}
+
+function draw() {
+	if(globalGLError)
+		return;
+
+	gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+	requestAnimationFrame(draw);
+}
 
 
 </script>
-<script type="x-shader/vertex" src="README.md"></script>
 
 
 </html>
