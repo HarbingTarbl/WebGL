@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+<meta charset="UTF-8">
+<title></title>
+<title>Assignment 1. Clock</title>
+<style>
+
+* {
+	margin: 0px;
+}
+
+
+body, canvas {
+	width: 80%;
+	height: 80%;
+}
+
+</style>
+</head>
+<body onload="startWebGL()">
+<canvas id="canvas"></canvas>
+
+
+
+<script type="text/javascript" src="gl-matrix.js"></script>
+<script type="text/javascript" src="ShaderProgram.js"></script>
+<script type="x-shader" id="draw-fragment">
+
+precision highp float;
+
+varying vec3 fPosition;
+varying vec3 fNormal;
+
+
+
+uniform float LightAtten;
+uniform float Roughness;
+
+uniform vec3 DiffuseColor;
+uniform vec3 SpecularColor;
+
+uniform vec3 LightPosition;
+uniform vec3 ViewPosition;
+
+const float PI = 3.1415926535897932384626433832;
+
+void main()
+{
+	vec3 tNormal = normalize(fNormal);
+	vec3 tEye = normalize(ViewPosition - fPosition);
+	vec3 tHalf = normalize(tEye + tNormal);
+	vec3 tLight = (LightPosition - fPosition);
+	float lightDist = length(tLight);
+	tLight /= lightDist;
+	lightDist *= lightDist;
+
+
+	float NdotL = clamp(dot(tNormal, tLight), 0.0, 1.0);
+	vec3 diffuseTerm = NdotL * DiffuseColor * LightAtten / lightDist;
+
+	float NdotH = pow(clamp(dot(tNormal, tHalf), 0.0, 1.0), Roughness);
+	vec3 specularTerm = NdotH * SpecularColor * LightAtten / lightDist;
+
+
+	gl_FragColor = vec4(pow(min(diffuseTerm + specularTerm , 1.0), vec3(1.0 / 2.2)), 1.0);
+}
+
+</script>
+<script type="x-shader" id="draw-vertex">
+
+attribute vec3 vPosition;
+attribute vec3 vNormal;
+
+
+varying vec3 fPosition;
+varying vec3 fNormal;
+
+uniform mat4 VPMatrix;
+uniform mat4 MMatrix;
+uniform mat3 NormalMatrix;
+
+void main()
+{
+	gl_Position = MMatrix * vec4(vPosition, 1.0);
+	fPosition = gl_Position.xyz;
+	gl_Position = VPMatrix * gl_Position;
+	fNormal = NormalMatrix * vNormal;
+}
+
+
+</script>
+<script type="text/javascript">
+var viewMatrix = mat4.create();
+var projectionMatrix = mat4.create();
+var viewProjectionMatrix = mat4.create();
+var scene = null;
+var drawpass = null;
+
+var gl = null;
+var globalGLError = false;
+
+
+function startWebGL(){
+	var canvas = document.querySelector("#canvas");
+	var scale = window.devicePixelRatio || 1;
+	canvas.width = canvas.clientWidth * scale;
+	canvas.height = canvas.clientHeight * scale;
+
+	try {
+		gl = canvas.getContext("webgl", {
+      		antialias: false,
+            stencil: false,
+            depth: true,
+            alpha: false,
+            premultipliedAlpha: false,
+            preserveDrawingBuffer: false
+		});
+
+		gl.ext = {};
+		gl.ext.depth24 = gl.getExtension("WEBGL_depth_texture");
+
+		if(!gl) {
+			alert("Could not load WebGL");
+			return;
+		}
+	} catch(ex) {
+		alert(ex);
+		return;
+	}
+
+	gl.clearColor(0.0, 0.0, 0.0, 1.0);
+	gl.enable(gl.DEPTH_TEST);
+	gl.enable(gl.CULL_FACE);
+
+
+	
+	mat4.lookAt(viewMatrix, [0,2,2], [0,0,0], [0,1,0]);
+	mat4.mul(viewProjectionMatrix, projectionMatrix, viewMatrix);
+
+	loadModel("SquareClock.model", function handleAsset(asset){
+		scene = asset;
+		drawpass = new DrawPass(canvas.width, canvas.height);
+		drawpass.cameraMatrix = viewProjectionMatrix;
+		requestAnimationFrame(draw);
+	});
+
+}
+
+function DrawPass(width, height){
+	this.width = width;
+	this.height = height;
+	this.lightPosition = [2, 5,2];
+	this.viewerPosition = [4, 2, 2];
+	this.targetPosition = [0,0,0];
+	this.projectionMatrix = mat4.create();
+	this.viewMatrix = mat4.create();
+	this.cameraMatrix = mat4.create();
+	mat4.perspective(this.projectionMatrix, 65.0 * 3.14 / 180.0, canvas.width / canvas.height, 1.0, 40.0);
+
+	this.program = new ShaderProgram({
+		vertex: document.querySelector("#draw-vertex").text,
+		fragment: document.querySelector("#draw-fragment").text,
+		binds: [
+			["vPosition", scene.Attributes.Position.Index],
+			["vNormal", scene.Attributes.Normal.Index],
+		]
+	});
+
+	this._mvp = mat4.create();
+
+	this.uniform = this.program.uniform;
+	this.sampler = this.program.sampler;
+
+	this.start = function(){
+		gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+		gl.viewport(0,0,this.width, this.height)
+		mat4.lookAt(this.viewMatrix, this.viewerPosition, this.targetPosition, [0,1,0]);
+		mat4.mul(this.cameraMatrix, this.projectionMatrix, this.viewMatrix);
+		this.program.use();
+		this.uniform.LightPosition = this.lightPosition;
+		this.uniform.ViewPosition = this.viewerPosition;
+		this.uniform.LightAtten = 10;
+		this.uniform.VPMatrix = this.cameraMatrix;
+	};
+
+	this.draw = function(obj){		
+		this.uniform.MMatrix = obj.Transform;
+		this.uniform.NormalMatrix = obj.NormalMatrix;
+
+		obj.Meshes.forEach(function(mesh){
+			this.uniform.DiffuseColor = mesh.Material.DiffuseColor;
+			this.uniform.SpecularColor = mesh.Material.SpecularColor;
+			this.uniform.Roughness = mesh.Material.Roughness;
+
+			mesh.Draw();
+		}, this);
+	};
+
+	this.finish = function(){
+
+	};
+}
+
+function loadModel(path, callback){
+	var model;
+	var counter = {
+		signal: function(){
+			this.value--;
+			console.log(this.value, " ↓");
+
+			if(this.value == 0){
+				callback(model);
+			}
+			else if(this.value < 0){
+				console.log("Counter called after callback executed!");
+			}
+		},
+		wait: function(){
+			this.value++;
+			console.log(this.value, " ↑");
+		},
+		value: 0, //What value should this be? Who knows! Guess until the page works again. 
+	};
+
+	var xhr = new XMLHttpRequest();
+	xhr.open("GET", path, true);
+	counter.wait();
+	xhr.responseType = "json";
+	xhr.onload = function(e) {
+		model = xhr.response;
+		var dataReq = new XMLHttpRequest();
+		dataReq.open("GET", model.Data, true);
+		counter.wait();
+		dataReq.responseType = "arraybuffer";
+		dataReq.onload = function(e) {
+			model.Data = dataReq.response;
+			model.VertexBuffer = new Float32Array(model.Data, model.VertexOffset, Math.round(model.VertexCount * model.VertexSize));
+			model.ArrayBuffer = gl.createBuffer();
+			gl.bindBuffer(gl.ARRAY_BUFFER, model.ArrayBuffer);
+			gl.bufferData(gl.ARRAY_BUFFER, model.VertexBuffer, gl.STATIC_DRAW);
+
+			for(var attrName in model.Attributes){
+				var attr = model.Attributes[attrName];
+				gl.enableVertexAttribArray(attr.Index);
+				gl.vertexAttribPointer(attr.Index, attr.Size, gl.FLOAT, false, 4 * model.VertexSize, attr.Offset);
+			}
+
+			if(model.IndexSize == 1){
+				model.IndexBuffer = new Uint8Array(model.Data, model.IndexOffset, Math.round(model.IndexCount));
+				model.ElementType = gl.UNSIGNED_BYTE;
+			} else {
+				model.IndexBuffer = new Uint16Array(model.Data, model.IndexOffset, Math.round(model.IndexCount));
+				model.ElementType = gl.UNSIGNED_SHORT;
+			}
+			model.ElementBuffer = gl.createBuffer();
+			gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, model.ElementBuffer);
+			gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, model.IndexBuffer, gl.STATIC_DRAW);
+
+			gl.bindBuffer(gl.ARRAY_BUFFER, null);
+			gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
+
+			model.VertexSize = 4 * model.VertexSize;
+
+			delete(model.IndexOffset);
+			delete(model.IndexBuffer);
+			delete(model.VertexOffset);
+			delete(model.VertexBuffer);
+			delete(model.IndexSize);
+			delete(model.Data);
+
+			model.BindBuffers = function() {
+				gl.bindBuffer(gl.ARRAY_BUFFER, this.ArrayBuffer);
+				for(var attrName in this.Attributes){
+					var attr = this.Attributes[attrName];
+					gl.vertexAttribPointer(attr.Index, attr.Size, gl.FLOAT, false, this.VertexSize, attr.Offset);
+				}
+				gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.ElementBuffer);
+			};
+			counter.signal();
+		};
+
+		dataReq.send();
+		for(var materialName in model.Materials) {
+			var material = model.Materials[materialName];
+
+			if(material.DiffuseTexture != ""){
+				counter.wait();
+				!function(mat){
+					var img = new Image();
+					img.onload = function() {
+						var oldSrc = mat.DiffuseTexture;
+						mat.DiffuseTexture = gl.createTexture();
+						mat.DiffuseTexture.src = oldSrc;
+						gl.bindTexture(gl.TEXTURE_2D, mat.DiffuseTexture);
+						gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, img);
+						gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+						gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+						gl.generateMipmap(gl.TEXTURE_2D);
+						gl.bindTexture(gl.TEXTURE_2D, null);
+
+						counter.signal();
+					};
+					img.src = mat.DiffuseTexture;
+				}(material);
+			}
+			
+			if(material.NormalTexture != ""){
+				counter.wait();
+				!function(mat){
+					var img = new Image();
+					img.onload = function() {
+						var oldSrc = mat.NormalTexture;
+						mat.NormalTexture = gl.createTexture();
+						mat.NormalTexture.src = oldSrc;
+						gl.bindTexture(gl.TEXTURE_2D, mat.NormalTexture);
+						gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, img);
+						gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+						gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+						gl.generateMipmap(gl.TEXTURE_2D);
+						gl.bindTexture(gl.TEXTURE_2D, null);
+
+						counter.signal();
+					};
+					img.src = mat.NormalTexture;
+				}(material);
+			}
+
+			if(material.SpecularTexture != ""){
+				counter.wait();
+				!function(mat){
+					var img = new Image();
+					img.onload = function() {
+						var oldSrc = mat.SpecularTexture;
+						mat.SpecularTexture = gl.createTexture();
+						mat.SpecularTexture.src = oldSrc;
+						gl.bindTexture(gl.TEXTURE_2D, mat.SpecularTexture);
+						gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, img);
+						gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+						gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+						gl.generateMipmap(gl.TEXTURE_2D);
+						gl.bindTexture(gl.TEXTURE_2D, null);
+
+						counter.signal();
+					};
+					img.src = mat.SpecularTexture;
+				}(material);
+			}
+		}
+
+		for(var meshIndex in model.Meshes) {
+			var mesh = model.Meshes[meshIndex];
+			mesh.Material = model.Materials[mesh.Material];
+			mesh.Draw = function(program){
+				gl.drawElements(gl.TRIANGLES, this.IndexCount, model.ElementType, this.IndexOffset);
+			};
+		}
+
+		for(var objectIndex in model.Objects){
+			var objectElement = model.Objects[objectIndex];
+			objectElement.Transform = new Float32Array(objectElement.Transform);
+			objectElement.NormalMatrix = mat3.create();
+			objectElement.UpdateNormal = function(){
+				mat3.fromMat4(this.NormalMatrix, this.Transform);
+				mat3.invert(this.NormalMatrix, this.NormalMatrix);
+				mat3.transpose(this.NormalMatrix, this.NormalMatrix);
+			};
+
+			for(var objectIndexMeshIndex in objectElement.Meshes){
+				var objectMeshIndex = objectElement.Meshes[objectIndexMeshIndex];
+				objectElement.Meshes[objectIndexMeshIndex] = model.Meshes[objectMeshIndex];
+			}
+
+			objectElement.Draw = function(program){
+				for(var meshIndex in this.Meshes){
+					this.Meshes[meshIndex].Draw(program);
+				};
+			};
+		};
+
+		counter.signal();
+	};
+
+	xhr.send();
+}
+
+
+function draw(){
+	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+	var date = new Date();
+	var seconds = date.getSeconds() / 60.0;
+	var minutes = date.getMinutes() / 60.0;
+	var hours = date.getHours() / 12.0;
+	var ms = (date.getMilliseconds() / 10000.0  + seconds * 6) * 3.14 * 2;
+
+	drawpass.viewerPosition = [Math.sin(ms) * 2, 3, Math.cos(ms) * 2];
+
+	scene.BindBuffers();
+	drawpass.start();
+	
+	mat4.rotateZ(scene.Objects.HourHand.Transform, mat4.create(), hours * -3.14 * 2);
+	scene.Objects.HourHand.UpdateNormal();
+	drawpass.draw(scene.Objects.HourHand);
+	
+	mat4.rotateZ(scene.Objects.MinuteHand.Transform, mat4.create(), minutes * -3.14 * 2);
+	scene.Objects.HourHand.UpdateNormal();
+	drawpass.draw(scene.Objects.MinuteHand);
+	
+	mat4.rotateZ(scene.Objects.SecondHand.Transform, mat4.create(), seconds * -3.14 * 2);
+	scene.Objects.HourHand.UpdateNormal();
+	drawpass.draw(scene.Objects.SecondHand);
+
+	drawpass.draw(scene.Objects.Pivot);
+	drawpass.draw(scene.Objects.ChamferBox);
+	drawpass.draw(scene.Objects.Back);
+	drawpass.finish();
+
+
+	requestAnimationFrame(draw);
+}
+
+</script>
+
+
+
+
+
+
+</body>
+</html>

@@ -1,0 +1,83 @@
+{
+    "Attributes": {
+        "Bitangent": {
+            "Index": 3,
+            "Offset": 36,
+            "Size": 3
+        },
+        "Normal": {
+            "Index": 1,
+            "Offset": 12,
+            "Size": 3
+        },
+        "Position": {
+            "Index": 0,
+            "Offset": 0,
+            "Size": 3
+        },
+        "Tangent": {
+            "Index": 2,
+            "Offset": 24,
+            "Size": 3
+        },
+        "UV0": {
+            "Index": 4,
+            "Offset": 48,
+            "Size": 2
+        }
+    },
+    "Data": "Cube.modeldata",
+    "IndexCount": 132,
+    "IndexOffset": 5376,
+    "IndexSize": 1,
+    "Materials": {
+        "Material-material": {
+            "AmbientCoeff": 0.0,
+            "DiffuseCoeff": 0.0,
+            "DiffuseTexture": "Diffuse.png",
+            "FresnelPower": 0.0,
+            "Name": "Material-material",
+            "NormalTexture": "Normal.png",
+            "Roughness": 111.0,
+            "ShadingModel": "",
+            "SpecularPower": 0.0,
+            "SpecularTexture": ""
+        }
+    },
+    "Meshes": [
+        {
+            "IndexCount": 132,
+            "IndexOffset": 0,
+            "Material": "Material-material"
+        }
+    ],
+    "Name": "Cube",
+    "Objects": {
+        "Cube": {
+            "Meshes": [
+                0
+            ],
+            "Transform": [
+                1.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                1.0,
+                0.0,
+                0.0,
+                -1.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                1.0
+            ]
+        }
+    },
+    "VertexCount": 96,
+    "VertexOffset": 0,
+    "VertexSize": 14
+}

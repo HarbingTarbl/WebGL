@@ -1,0 +1,74 @@
+{
+    "VertexSize": 8,
+    "IndexOffset": 25344,
+    "Materials": {
+        "DefaultMaterial": {
+            "SpecularColor": [
+                1,
+                1,
+                1
+            ],
+            "Roughness": 5,
+            "DiffuseColor": [
+                1,
+                1,
+                1
+            ]
+        }
+    },
+    "Data": "meshData.modeldata",
+    "IndexCount": 2976,
+    "Name": "Mesh",
+    "Objects": {
+        "Mesh": {
+            "Meshes": [
+                0
+            ],
+            "Transform": [
+                1.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                1.0,
+                0.0,
+                0.0,
+                -1.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                1.0
+            ]
+        }
+    },
+    "VertexCount": 792,
+    "IndexSize": 2,
+    "VertexOffset": 0,
+    "Meshes": [
+        {
+            "IndexCount": 2976,
+            "IndexOffset": 0,
+            "Material": "DefaultMaterial"
+        }
+    ],
+    "Attributes": {
+        "Position": {
+            "Offset": 0,
+            "Index": 0,
+            "Size": 3
+        },
+        "Normal": {
+            "Offset": 12,
+            "Index": 1,
+            "Size": 3
+        },
+        "UV0": {
+            "Offset": 24,
+            "Index": 2,
+            "Size": 2
+        }
+    }
+}
