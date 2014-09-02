@@ -33,6 +33,7 @@
         background-color: dimgray;
         width: 300pt;
         height: 150pt;
+        padding:5px;
     }
 
     #options * {
@@ -45,12 +46,17 @@
 
     }
 
-    #options label {
-        float: left;
+
+    #options input, #options select {
+        float: right;
     }
 
-    #options * {
-        float: right;
+    #options div {
+
+    }
+
+    #options label {
+        float: left;
     }
 
     #options::after {
@@ -69,6 +75,18 @@
     <option value="drawSqrClock">Square Clock</option>
     <option value="drawTeapot">Teapot</option>
 </select>
+<div id="clock_options" style="clear:both;">
+<label for="smoothSeconds">Smooth Seconds</label>
+<input type="checkbox" id="smoothSeconds" />
+<div id="clock_options" style="clear:both;">
+<label for="smoothMinutes">Smooth Minutes</label>
+<input type="checkbox" id="smoothMinutes" />
+<div id="clock_options" style="clear:both;">
+<label for="smoothHours">Smooth Hours</label>
+<input type="checkbox" id="smoothHours" />
+<div style="clear:both;" />
+<p id="time" style="text-align:center">Time:</p>
+</div>
 </div>
 </main>
 
@@ -152,12 +170,15 @@ var globalGLError = false;
 
 function changeMeshes(e) {
     e = e.value;
+    var clock_options = document.querySelector("#clock_options");
     if(e === "drawTeapot") {
         scene = teapotScene;
         drawCall = drawTeapot;
+        clock_options.hidden = true;
     } else if(e === "drawSqrClock") {
         scene = sqrClockScene;
         drawCall = drawSqrClock;
+        clock_options.hidden = false;
     }
 }
 
@@ -178,14 +199,19 @@ function startWebGL() {
     canvas.height = canvas.clientHeight * scale;
 
     try {
-        gl = canvas.getContext("webgl", {
+    	var canvasOptions = {
             antialias: true,
             stencil: false,
             depth: true,
             alpha: false,
             premultipliedAlpha: false,
             preserveDrawingBuffer: false
-        });
+        };
+
+        gl = canvas.getContext("webgl", canvasOptions );
+
+        if(gl === null)
+        	gl = canvas.getContext("experimental-webgl", canvasOptions);
 
         gl.ext = {};
         gl.ext.depth24 = gl.getExtension("WEBGL_depth_texture");
@@ -277,7 +303,7 @@ function DrawPass(width, height){
 	this.cameraMatrix = mat4.create();
     this.invViewMatrix = mat4.create();
     mat4.lookAt(this.viewMatrix, this.viewerPosition, this.targetPosition,[0,1,0]);
-	mat4.perspective(this.projectionMatrix, 65.0 * 3.14 / 180.0, canvas.width / canvas.height, 1.0, 40.0);
+	mat4.perspective(this.projectionMatrix, 65.0 * 3.14 / 180.0, canvas.clientWidth / canvas.clientHeight, 1.0, 40.0);
 
 	this.program = new ShaderProgram({
 		vertex: document.querySelector("#draw-vertex").text,
@@ -287,9 +313,7 @@ function DrawPass(width, height){
 			["vNormal", scene.Attributes.Normal.Index],
 		]
 	});
-
-	this._mvp = mat4.create();
-
+	
 	this.uniform = this.program.uniform;
 	this.sampler = this.program.sampler;
     this.modelMatrix = mat4.create();
@@ -356,11 +380,14 @@ function loadModel(path, callback){
 	xhr.open("GET", path, true);
 	counter.wait();
 	xhr.responseType = "json";
+	console.log(xhr.responseType);
 	xhr.onload = function(e) {
 		model = xhr.response;
+		if(typeof(model) === "string") { //Silly Safari, json != string. 
+			model = JSON.parse(model);
+		}
 		var dataReq = new XMLHttpRequest();
 		dataReq.open("GET", model.Data, true);
-        console.log(model);
 		counter.wait();
 		dataReq.responseType = "arraybuffer";
 		dataReq.onload = function(e) {
@@ -525,7 +552,28 @@ function drawSqrClock(){
 	var seconds = date.getSeconds() / 60.0;
 	var minutes = date.getMinutes() / 60.0;
 	var hours = date.getHours() / 12.0;
-	var ms = (date.getMilliseconds() / 10000.0  + seconds * 6) * 3.14 * 2;
+	var ms = date.getMilliseconds() / 1000.0;
+
+
+	if(document.querySelector("#smoothSeconds").checked){
+		seconds += ms / 60.0;	
+	}
+
+	if(document.querySelector("#smoothMinutes").checked){
+		minutes += seconds / 60.0;
+	}
+
+	if(document.querySelector("#smoothHours").checked){
+		hours += minutes / 12.0;
+	}
+
+	document.querySelector("#time").innerHTML = "Time: " + (hours * 12).toFixed(2) + " : " + (minutes * 60).toFixed(2) + " : " + (seconds * 60).toFixed(2);
+		
+
+	// console.log("Seconds", seconds * 60);
+	// console.log("Minutes", minutes * 60);
+	// console.log("Hours", hours * 12);
+	// console.log("Hours-Actual", date.getHours());
 
 	sqrClockScene.BindBuffers();
 	drawpass.start();
