@@ -6,21 +6,71 @@
 <title>Assignment 1. Clock</title>
 <style>
 
-* {
-	margin: 0px;
-}
+    * {
+        margin: 0;
+        padding: 0;
+    }
 
+    body {
+        overflow-y: hidden;
+    }
 
-body, canvas {
-	width: 80%;
-	height: 80%;
-}
+    body, canvas, main {
+        width: 100%;
+        height: 100%;
+    }
+
+    canvas {
+        z-index: 0;
+    }
+
+    #options {
+        position: absolute;
+        z-index: 1;
+        left: 1%;
+        top: 2%;
+        display: inline-block;
+        background-color: dimgray;
+        width: 300pt;
+        height: 150pt;
+    }
+
+    #options * {
+        color: white;
+        background-color: dimgray;
+        font-size: 16pt;
+        font-weight: normal;
+        font-style: normal;
+        font-family: monospace;
+
+    }
+
+    #options label {
+        float: left;
+    }
+
+    #options * {
+        float: right;
+    }
+
+    #options::after {
+        clear:both;
+    }
 
 </style>
 </head>
 <body onload="startWebGL()">
-<canvas id="canvas"></canvas>
 
+<main>
+<canvas id="canvas"></canvas>
+<div id="options">
+<label for="meshSelector">Mesh</label>
+<select id="meshSelector" onchange="changeMeshes(this)">
+    <option value="drawSqrClock">Square Clock</option>
+    <option value="drawTeapot">Teapot</option>
+</select>
+</div>
+</main>
 
 
 <script type="text/javascript" src="gl-matrix.js"></script>
@@ -56,8 +106,10 @@ void main()
 	float NdotL = clamp(dot(tNormal, tLight), 0.0, 1.0);
 	vec3 diffuseTerm = NdotL * DiffuseColor * LightAtten / lightDist;
 
-	float NdotH = pow(clamp(dot(tNormal, tHalf), 0.0, 1.0), Roughness);
-	vec3 specularTerm = NdotH * SpecularColor * LightAtten / lightDist;
+	float NdotH = clamp(dot(tNormal, tHalf), 0.0, 1.0);
+	NdotH = NdotL * NdotH * 0.2 + NdotH * 0.8;;
+	NdotH = pow(NdotH, Roughness);
+	vec3 specularTerm = NdotH *  SpecularColor * LightAtten / lightDist;
 
 
 	gl_FragColor = vec4(pow(min(diffuseTerm + specularTerm , 1.0), vec3(1.0 / 2.2)), 1.0);
@@ -89,14 +141,37 @@ var viewMatrix = mat4.create();
 var projectionMatrix = mat4.create();
 var viewProjectionMatrix = mat4.create();
 var scene = null;
+var sqrClockScene;
+var teapotScene;
 var drawpass = null;
 var canvas;
+var drawCall;
 
 var gl = null;
 var globalGLError = false;
 
+function changeMeshes(e) {
+    e = e.value;
+    if(e === "drawTeapot") {
+        scene = teapotScene;
+        drawCall = drawTeapot;
+    } else if(e === "drawSqrClock") {
+        scene = sqrClockScene;
+        drawCall = drawSqrClock;
+    }
+}
 
 function startWebGL() {
+    var doc = document.querySelector("main");
+    doc.onmousewheel = function(e){
+        e.cancelBubble = true;
+        if(e.stopPropagation)
+            e.stopPropagation();
+        return false;
+    };
+
+    drawCall = function(){};
+
     canvas = document.querySelector("#canvas");
     var scale = window.devicePixelRatio || 1;
     canvas.width = canvas.clientWidth * scale;
@@ -132,14 +207,20 @@ function startWebGL() {
     mat4.lookAt(viewMatrix, [0, 2, 2], [0, 0, 0], [0, 1, 0]);
     mat4.mul(viewProjectionMatrix, projectionMatrix, viewMatrix);
 
-    loadModel("SquareClock.model", function handleAsset(asset) {
+    loadModel("SquareClock.model", function (asset) {
+        sqrClockScene = asset;
+        sqrClockScene.Transform = mat4.create();
         scene = asset;
-        scene.Transform = mat4.create();
         drawpass = new DrawPass(canvas.width, canvas.height);
         drawpass.cameraMatrix = viewProjectionMatrix;
+        drawCall = drawSqrClock;
         requestAnimationFrame(draw);
     });
 
+    loadModel("meshData.model", function(asset) {
+        teapotScene = asset;
+        teapotScene.Transform = mat4.create();
+    });
 
     canvas.mouseState = 0;
     canvas.objectRotation = mat4.create();
@@ -173,17 +254,13 @@ function startWebGL() {
             mat4.mul(scene.Transform, canvas.objectRotation, scene.Transform);
 
         } else if(canvas.mouseButton === 2){ //Right Click
-            vec3.transformMat4(drawpass.lightPosition, vec3.fromValues(2,5,2), canvas.objectRotation);
+            vec3.transformMat4(drawpass.lightPosition, drawpass.lightPosition, canvas.objectRotation);
         }
-
-
-        console.log(deltaX,  deltaY);
 
         return true;
     };
 
     canvas.oncontextmenu = function(e){
-        console.log(e);
         return false;
     };
 
@@ -283,6 +360,7 @@ function loadModel(path, callback){
 		model = xhr.response;
 		var dataReq = new XMLHttpRequest();
 		dataReq.open("GET", model.Data, true);
+        console.log(model);
 		counter.wait();
 		dataReq.responseType = "arraybuffer";
 		dataReq.onload = function(e) {
@@ -436,8 +514,12 @@ function loadModel(path, callback){
 	xhr.send();
 }
 
-
 function draw(){
+    drawCall();
+    requestAnimationFrame(draw);
+}
+
+function drawSqrClock(){
 	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 	var date = new Date();
 	var seconds = date.getSeconds() / 60.0;
@@ -445,30 +527,35 @@ function draw(){
 	var hours = date.getHours() / 12.0;
 	var ms = (date.getMilliseconds() / 10000.0  + seconds * 6) * 3.14 * 2;
 
-	drawpass.viewerPosition = [Math.sin(ms) * 2, 3, Math.cos(ms) * 2];
-
-	scene.BindBuffers();
+	sqrClockScene.BindBuffers();
 	drawpass.start();
 	
-	mat4.rotateZ(scene.Objects.HourHand.Transform, mat4.create(), hours * -3.14 * 2);
-	scene.Objects.HourHand.UpdateNormal();
-	drawpass.draw(scene.Objects.HourHand);
-	
-	mat4.rotateZ(scene.Objects.MinuteHand.Transform, mat4.create(), minutes * -3.14 * 2);
-	scene.Objects.HourHand.UpdateNormal();
-	drawpass.draw(scene.Objects.MinuteHand);
-	
-	mat4.rotateZ(scene.Objects.SecondHand.Transform, mat4.create(), seconds * -3.14 * 2);
-	scene.Objects.HourHand.UpdateNormal();
-	drawpass.draw(scene.Objects.SecondHand);
+	mat4.rotateZ(sqrClockScene.Objects.HourHand.Transform, mat4.create(), hours * -3.14 * 2);
+    sqrClockScene.Objects.HourHand.UpdateNormal();
+	drawpass.draw(sqrClockScene.Objects.HourHand);
 
-	drawpass.draw(scene.Objects.Pivot);
-	drawpass.draw(scene.Objects.ChamferBox);
-	drawpass.draw(scene.Objects.Back);
+	mat4.rotateZ(sqrClockScene.Objects.MinuteHand.Transform, mat4.create(), minutes * -3.14 * 2);
+    sqrClockScene.Objects.HourHand.UpdateNormal();
+	drawpass.draw(sqrClockScene.Objects.MinuteHand);
+
+	mat4.rotateZ(sqrClockScene.Objects.SecondHand.Transform, mat4.create(), seconds * -3.14 * 2);
+    sqrClockScene.Objects.HourHand.UpdateNormal();
+	drawpass.draw(sqrClockScene.Objects.SecondHand);
+
+	drawpass.draw(sqrClockScene.Objects.Pivot);
+	drawpass.draw(sqrClockScene.Objects.ChamferBox);
+	drawpass.draw(sqrClockScene.Objects.Back);
+
 	drawpass.finish();
+}
 
+function drawTeapot(){
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    teapotScene.BindBuffers();
 
-	requestAnimationFrame(draw);
+    drawpass.start();
+    drawpass.draw(teapotScene.Objects.Mesh);
+    drawpass.finish();
 }
 
 </script>

@@ -52,6 +52,8 @@ model = {
 			"DiffuseColor":[1,1,1],
 			"SpecularColor":[1,1,1],
 			"Roughness":5,
+			"DiffuseTexture": "",
+			"NormalTexture":""
 		}
 	},
 	"Meshes":[
@@ -86,9 +88,6 @@ model = {
 	},
 	"Name":"Mesh"
 }
-
-model["Data"] = "meshData.modeldata"
-
 
 print(outputFile.tell())
 

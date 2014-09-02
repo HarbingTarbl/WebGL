@@ -8,12 +8,15 @@
                 1,
                 1
             ],
-            "Roughness": 5,
+            "Roughness": 600,
             "DiffuseColor": [
-                1,
-                1,
-                1
-            ]
+                0.8,
+                0.4,
+                0.4
+            ],
+            "DiffuseTexture":"",
+            "NormalTexture":"",
+            "SpecularTexture":""
         }
     },
     "Data": "meshData.modeldata",
