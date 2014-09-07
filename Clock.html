@@ -71,6 +71,7 @@
 <div id="options">
 <label for="meshSelector">Mesh</label>
 <select id="meshSelector" onchange="changeMeshes(this)">
+    <option value="drawTexturedClock">Textured Clock</option>
     <option value="drawSqrClock">Square Clock</option>
     <option value="drawTeapot">Teapot</option>
 </select>
@@ -97,6 +98,7 @@ precision highp float;
 
 varying vec3 fPosition;
 varying vec3 fNormal;
+varying vec2 fTexture;
 
 uniform float LightAtten;
 uniform float Roughness;
@@ -106,6 +108,8 @@ uniform vec3 SpecularColor;
 
 uniform vec3 LightPosition;
 uniform vec3 ViewPosition;
+
+uniform sampler2D sDiffuseTexture;
 
 const float PI = 3.1415926535897932384626433832;
 
@@ -121,10 +125,10 @@ void main()
 
 
 	float NdotL = clamp(dot(tNormal, tLight), 0.0, 1.0);
-	vec3 diffuseTerm = NdotL * DiffuseColor * LightAtten / lightDist;
+	vec3 diffuseTerm = NdotL * DiffuseColor * texture2D(sDiffuseTexture, fTexture).rgb * LightAtten / lightDist;
 
 	float NdotH = clamp(dot(tNormal, tHalf), 0.0, 1.0);
-	NdotH = NdotL * NdotH * 0.2 + NdotH * 0.8;;
+	NdotH = NdotL * NdotH * 0.4 + NdotH * 0.6;
 	NdotH = pow(NdotH, Roughness);
 	vec3 specularTerm = NdotH *  SpecularColor * LightAtten / lightDist;
 
@@ -136,10 +140,11 @@ void main()
 
 attribute vec3 vPosition;
 attribute vec3 vNormal;
-
+attribute vec2 vTexture;
 
 varying vec3 fPosition;
 varying vec3 fNormal;
+varying vec2 fTexture;
 
 uniform mat4 VPMatrix;
 uniform mat4 MMatrix;
@@ -151,6 +156,7 @@ void main()
 	fPosition = gl_Position.xyz;
 	gl_Position = VPMatrix * gl_Position;
 	fNormal = NormalMatrix * vNormal;
+	fTexture = vTexture;
 }
 </script>
 <script type="text/javascript">
@@ -160,6 +166,7 @@ var viewProjectionMatrix = mat4.create();
 var scene = null;
 var sqrClockScene;
 var teapotScene;
+var texturedClockScene;
 var drawpass = null;
 var canvas;
 var drawCall;
@@ -178,6 +185,9 @@ function changeMeshes(e) {
         scene = sqrClockScene;
         drawCall = drawSqrClock;
         clock_options.hidden = false;
+    } else if(e == "drawTexturedClock") {
+    	scene = texturedClockScene;
+    	drawCall = drawTexturedClock;
     }
 }
 
@@ -232,20 +242,37 @@ function startWebGL() {
     mat4.lookAt(viewMatrix, [0, 2, 2], [0, 0, 0], [0, 1, 0]);
     mat4.mul(viewProjectionMatrix, projectionMatrix, viewMatrix);
 
+
+    var contentLoaded = function(){
+    	scene = texturedClockScene;
+    	drawpass = new DrawPass(canvas.width, canvas.height);
+        drawpass.cameraMatrix = viewProjectionMatrix;
+        drawCall = drawTexturedClock;
+        requestAnimationFrame(draw);
+    };
+
+
     loadModel("SquareClock.model", function (asset) {
         sqrClockScene = asset;
         sqrClockScene.Transform = mat4.create();
-        scene = asset;
-        drawpass = new DrawPass(canvas.width, canvas.height);
-        drawpass.cameraMatrix = viewProjectionMatrix;
-        drawCall = drawSqrClock;
-        requestAnimationFrame(draw);
+		loadModel("meshData.model", function(asset) {
+		    teapotScene = asset;
+		    teapotScene.Transform = mat4.create();
+			loadModel("TextureClock.model", function(asset){
+    			texturedClockScene = asset;
+    			texturedClockScene.Transform = mat4.create();
+    			//I spent wayyyy too long trying to get blender to fix the backwards UV's on this model. 
+    			//This is my solution.
+    			mat4.scale(texturedClockScene.Transform, texturedClockScene.Transform, [0.1, 0.1, 0.1]);
+    			mat4.rotateZ(texturedClockScene.Transform, texturedClockScene.Transform, 3.14);
+    			mat4.rotateY(texturedClockScene.Transform, texturedClockScene.Transform, 3.14);
+
+    			contentLoaded();
+		    });
+		});
     });
 
-    loadModel("meshData.model", function(asset) {
-        teapotScene = asset;
-        teapotScene.Transform = mat4.create();
-    });
+
 
     canvas.mouseState = 0;
     canvas.objectRotation = mat4.create();
@@ -310,6 +337,7 @@ function DrawPass(width, height){
 		binds: [
 			["vPosition", scene.Attributes.Position.Index],
 			["vNormal", scene.Attributes.Normal.Index],
+			["vTexture", scene.Attributes.UV0.Index],
 		]
 	});
 	
@@ -344,6 +372,7 @@ function DrawPass(width, height){
 			this.uniform.DiffuseColor = mesh.Material.DiffuseColor;
 			this.uniform.SpecularColor = mesh.Material.SpecularColor;
 			this.uniform.Roughness = mesh.Material.Roughness;
+			this.sampler.sDiffuseTexture = mesh.Material.DiffuseTexture;
 
 			mesh.Draw();
 		}, this);
@@ -355,6 +384,18 @@ function DrawPass(width, height){
 }
 
 function loadModel(path, callback){
+	if( typeof loadModel.blankTexture === "undefined" ){
+		loadModel.blankTexture = gl.createTexture();
+		gl.bindTexture(gl.TEXTURE_2D, loadModel.blankTexture);
+		gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([255,255,255,255]));
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+		gl.bindTexture(gl.TEXTURE_2D, null);
+
+	}
+
 	var model;
 	var counter = {
 		signal: function(){
@@ -421,7 +462,7 @@ function loadModel(path, callback){
 			delete(model.IndexOffset);
 			delete(model.IndexBuffer);
 			delete(model.VertexOffset);
-			delete(model.VertexBuffer);
+			//delete(model.VertexBuffer);
 			delete(model.IndexSize);
 			delete(model.Data);
 
@@ -450,15 +491,25 @@ function loadModel(path, callback){
 						mat.DiffuseTexture.src = oldSrc;
 						gl.bindTexture(gl.TEXTURE_2D, mat.DiffuseTexture);
 						gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, img);
-						gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-						gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-						gl.generateMipmap(gl.TEXTURE_2D);
+						if(img.width % 2 === 0 && img.height % 2 === 0){
+							gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+							gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+							gl.generateMipmap(gl.TEXTURE_2D);
+						}
+						else{
+							gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+							gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+							gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+							gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+						}
 						gl.bindTexture(gl.TEXTURE_2D, null);
 
 						counter.signal();
 					};
 					img.src = mat.DiffuseTexture;
 				}(material);
+			} else{
+				material.DiffuseTexture = loadModel.blankTexture;
 			}
 			
 			if(material.NormalTexture != ""){
@@ -471,15 +522,26 @@ function loadModel(path, callback){
 						mat.NormalTexture.src = oldSrc;
 						gl.bindTexture(gl.TEXTURE_2D, mat.NormalTexture);
 						gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, img);
-						gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-						gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-						gl.generateMipmap(gl.TEXTURE_2D);
+						if(img.width % 2 === 0 && img.height % 2 === 0){
+							gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+							gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR_MIPMAP_NEAREST);
+							gl.generateMipmap(gl.TEXTURE_2D);
+						}
+						else{
+							gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+							gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+							gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+							gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+						}
 						gl.bindTexture(gl.TEXTURE_2D, null);
 
 						counter.signal();
 					};
 					img.src = mat.NormalTexture;
 				}(material);
+			}
+			else{
+				material.NormalTexture = loadModel.blankTexture;
 			}
 
 			if(material.SpecularTexture != ""){
@@ -492,15 +554,26 @@ function loadModel(path, callback){
 						mat.SpecularTexture.src = oldSrc;
 						gl.bindTexture(gl.TEXTURE_2D, mat.SpecularTexture);
 						gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, img);
-						gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-						gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-						gl.generateMipmap(gl.TEXTURE_2D);
+						if(img.width % 2 === 0 && img.height % 2 === 0){
+							gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+							gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR_MIPMAP_NEAREST);
+							gl.generateMipmap(gl.TEXTURE_2D);
+						}
+						else{
+							gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+							gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+							gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+							gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+						}
 						gl.bindTexture(gl.TEXTURE_2D, null);
 
 						counter.signal();
 					};
 					img.src = mat.SpecularTexture;
 				}(material);
+			}
+			else{
+				material.SpecularTexture = loadModel.blankTexture;
 			}
 		}
 
@@ -545,8 +618,7 @@ function draw(){
     requestAnimationFrame(draw);
 }
 
-function drawSqrClock(){
-	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+function getTimeCoeffs(){
 	var date = new Date();
 	var seconds = date.getSeconds() / 60.0;
 	var minutes = date.getMinutes() / 60.0;
@@ -567,25 +639,57 @@ function drawSqrClock(){
 	}
 
 	document.querySelector("#time").innerHTML = "Time: " + (hours * 12).toFixed(2) + " : " + (minutes * 60).toFixed(2) + " : " + (seconds * 60).toFixed(2);
-		
+	
+	return {hours: hours, minutes: minutes, seconds: seconds};	
+}
 
-	// console.log("Seconds", seconds * 60);
-	// console.log("Minutes", minutes * 60);
-	// console.log("Hours", hours * 12);
-	// console.log("Hours-Actual", date.getHours());
+
+function drawTexturedClock(){
+	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+	scene.BindBuffers();
+	drawpass.start();
+
+	var times = getTimeCoeffs();
+
+	times.hours += 0.5;
+	times.minutes += 0.5;
+	times.seconds += 0.5;
+
+	mat4.rotateZ(scene.Objects.HourHand.Transform, mat4.create(), times.hours * 3.14 * 2);
+	scene.Objects.HourHand.UpdateNormal();
+	drawpass.draw(scene.Objects.HourHand);
+
+	mat4.rotateZ(scene.Objects.MinuteHand.Transform, mat4.create(), times.minutes * 3.14 * 2);
+	scene.Objects.MinuteHand.UpdateNormal();
+	drawpass.draw(scene.Objects.MinuteHand);
+
+	mat4.rotateZ(scene.Objects.SecondHand.Transform, mat4.create(), times.seconds * 3.14 * 2);
+	scene.Objects.SecondHand.UpdateNormal();
+	drawpass.draw(scene.Objects.SecondHand);
+
+	drawpass.draw(scene.Objects.Body);
+
+	drawpass.finish();
+}
+
+function drawSqrClock(){
+	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+	var times = getTimeCoeffs();
 
 	sqrClockScene.BindBuffers();
 	drawpass.start();
 	
-	mat4.rotateZ(sqrClockScene.Objects.HourHand.Transform, mat4.create(), hours * -3.14 * 2);
+	mat4.rotateZ(sqrClockScene.Objects.HourHand.Transform, mat4.create(), times.hours * -3.14 * 2);
     sqrClockScene.Objects.HourHand.UpdateNormal();
 	drawpass.draw(sqrClockScene.Objects.HourHand);
 
-	mat4.rotateZ(sqrClockScene.Objects.MinuteHand.Transform, mat4.create(), minutes * -3.14 * 2);
+	mat4.rotateZ(sqrClockScene.Objects.MinuteHand.Transform, mat4.create(), times.minutes * -3.14 * 2);
     sqrClockScene.Objects.HourHand.UpdateNormal();
 	drawpass.draw(sqrClockScene.Objects.MinuteHand);
 
-	mat4.rotateZ(sqrClockScene.Objects.SecondHand.Transform, mat4.create(), seconds * -3.14 * 2);
+	mat4.rotateZ(sqrClockScene.Objects.SecondHand.Transform, mat4.create(), times.seconds * -3.14 * 2);
     sqrClockScene.Objects.HourHand.UpdateNormal();
 	drawpass.draw(sqrClockScene.Objects.SecondHand);
 

@@ -1,5 +1,10 @@
 {
     "Attributes": {
+        "Bitangent": {
+            "Index": 3,
+            "Offset": 36,
+            "Size": 3
+        },
         "Normal": {
             "Index": 1,
             "Offset": 12,
@@ -10,18 +15,23 @@
             "Offset": 0,
             "Size": 3
         },
-        "UV0" : {
-            "Index" : 4,
-            "Offset": 0,
-            "Size" : 2
+        "Tangent": {
+            "Index": 2,
+            "Offset": 24,
+            "Size": 3
+        },
+        "UV0": {
+            "Index": 4,
+            "Offset": 48,
+            "Size": 2
         }
     },
-    "Data": "SquareClock.modeldata",
-    "IndexCount": 30162,
-    "IndexOffset": 131160,
+    "Data": "TextureClock.modeldata",
+    "IndexCount": 1968,
+    "IndexOffset": 41664,
     "IndexSize": 2,
     "Materials": {
-        "01_-_Default": {
+        "JoinedMaterial_#3": {
             "AmbientCoeff": 0.0,
             "AmbientColor": [
                 0.0,
@@ -30,25 +40,25 @@
             ],
             "DiffuseCoeff": 0.0,
             "DiffuseColor": [
-                0.59294098615646362,
-                0.53333300352096558,
-                0.0
+                0.025097999721765518,
+                0.025097999721765518,
+                0.025097999721765518
             ],
             "DiffuseTexture": "",
             "FresnelPower": 0.0,
-            "Name": "01_-_Default",
+            "Name": "JoinedMaterial_#3",
             "NormalTexture": "",
-            "Roughness": 384.313720703125,
+            "Roughness": 900.0,
             "ShadingModel": "",
             "SpecularColor": [
-                0.30000001192092896,
-                0.30000001192092896,
-                0.30000001192092896
+                0.2,
+                0.2,
+                0.2
             ],
             "SpecularPower": 0.0,
             "SpecularTexture": ""
         },
-        "03_-_Default": {
+        "Paint_01.002": {
             "AmbientCoeff": 0.0,
             "AmbientColor": [
                 0.0,
@@ -61,43 +71,16 @@
                 0.80000001192092896,
                 0.80000001192092896
             ],
-            "DiffuseTexture": "",
+            "DiffuseTexture": "Clock_diffuse.png",
             "FresnelPower": 0.0,
-            "Name": "03_-_Default",
+            "Name": "Paint_01.002",
             "NormalTexture": "",
-            "Roughness": 384.313720703125,
+            "Roughness": 300.0,
             "ShadingModel": "",
             "SpecularColor": [
-                0.47843098640441895,
-                0.47843098640441895,
-                0.47843098640441895
-            ],
-            "SpecularPower": 0.0,
-            "SpecularTexture": ""
-        },
-        "black": {
-            "AmbientCoeff": 0.0,
-            "AmbientColor": [
-                0.0,
-                0.0,
-                0.0
-            ],
-            "DiffuseCoeff": 0.0,
-            "DiffuseColor": [
-                0.047058999538421631,
-                0.047058999538421631,
-                0.047058999538421631
-            ],
-            "DiffuseTexture": "",
-            "FresnelPower": 0.0,
-            "Name": "black",
-            "NormalTexture": "",
-            "Roughness": 384.313720703125,
-            "ShadingModel": "",
-            "SpecularColor": [
-                0.44901999831199646,
-                0.44901999831199646,
-                0.44901999831199646
+                0.1,
+                0.1,
+                0.1
             ],
             "SpecularPower": 0.0,
             "SpecularTexture": ""
@@ -105,70 +88,41 @@
     },
     "Meshes": [
         {
-            "IndexCount": 3060,
+            "IndexCount": 552,
             "IndexOffset": 0,
-            "Material": "black",
+            "Material": "JoinedMaterial_#3",
             "Name": ""
         },
         {
-            "IndexCount": 18228,
-            "IndexOffset": 6120,
-            "Material": "01_-_Default",
+            "IndexCount": 516,
+            "IndexOffset": 1104,
+            "Material": "JoinedMaterial_#3",
             "Name": ""
         },
         {
-            "IndexCount": 354,
-            "IndexOffset": 42576,
-            "Material": "black",
+            "IndexCount": 552,
+            "IndexOffset": 2136,
+            "Material": "JoinedMaterial_#3",
             "Name": ""
         },
         {
-            "IndexCount": 2400,
-            "IndexOffset": 43284,
-            "Material": "03_-_Default",
+            "IndexCount": 84,
+            "IndexOffset": 3240,
+            "Material": "Paint_01.002",
             "Name": ""
         },
         {
-            "IndexCount": 3060,
-            "IndexOffset": 48084,
-            "Material": "black",
-            "Name": ""
-        },
-        {
-            "IndexCount": 3060,
-            "IndexOffset": 54204,
-            "Material": "black",
+            "IndexCount": 264,
+            "IndexOffset": 3408,
+            "Material": "JoinedMaterial_#3",
             "Name": ""
         }
     ],
-    "Name": "SquareClock",
+    "Name": "TextureClock.obj",
     "Objects": {
-        "Back": {
+        "Body": {
             "Meshes": [
-                1
-            ],
-            "Transform": [
-                1.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                1.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                1.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                1.0
-            ]
-        },
-        "ChamferBox": {
-            "Meshes": [
-                2
+                3, 4
             ],
             "Transform": [
                 1.0,
@@ -191,7 +145,7 @@
         },
         "HourHand": {
             "Meshes": [
-                5
+                1
             ],
             "Transform": [
                 1.0,
@@ -214,30 +168,7 @@
         },
         "MinuteHand": {
             "Meshes": [
-                4
-            ],
-            "Transform": [
-                1.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                1.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                1.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                1.0
-            ]
-        },
-        "Pivot": {
-            "Meshes": [
-                3
+                2
             ],
             "Transform": [
                 1.0,
@@ -282,7 +213,7 @@
             ]
         }
     },
-    "VertexCount": 5465,
+    "VertexCount": 744,
     "VertexOffset": 0,
-    "VertexSize": 6
+    "VertexSize": 14
 }

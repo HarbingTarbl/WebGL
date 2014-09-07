@@ -1,0 +1,31 @@
+# Blender MTL File: 'TextureClock.blend'
+# Material Count: 3
+
+newmtl Paint_01.002
+Ns 29.411765
+Ka 0.000000 0.000000 0.000000
+Kd 0.800000 0.800000 0.800000
+Ks 1.000000 1.000000 1.000000
+Ni 1.000000
+d 1.000000
+illum 2
+map_Kd Clock_diffuse.png
+map_Bump /Users/harbingtarbl/Downloads/clock_textured/Clock 01 bp.png
+
+newmtl Paint_02.002
+Ns 29.411765
+Ka 0.000000 0.000000 0.000000
+Kd 0.025098 0.025098 0.025098
+Ks 1.000000 1.000000 1.000000
+Ni 1.000000
+d 1.000000
+illum 2
+
+newmtl Paint_020.002
+Ns 29.411765
+Ka 0.000000 0.000000 0.000000
+Kd 0.025098 0.025098 0.025098
+Ks 1.000000 1.000000 1.000000
+Ni 1.000000
+d 1.000000
+illum 2
