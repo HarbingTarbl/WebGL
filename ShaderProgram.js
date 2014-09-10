@@ -1,4 +1,32 @@
-"use strict";
+"use strict"
+
+
+
+function ShaderSource(filename, onload){
+    if(typeof ShaderSource.regex === "undefined"){
+        ShaderSource.regex = /^(?=---(?!.*END)(?:.*START\s(\w+)\s)?).*\n((?:(?!---(?:$|.*END)).*\n)+)/gm;
+    }
+
+    $.get(
+        filename,
+        function(data){
+            var a;
+            var b;
+            var obj = {};
+            while((a = ShaderSource.regex.exec(data)) != null && (b = ShaderSource.regex.exec(data)) != null){
+                if(a.index === ShaderSource.regex.lastIndex || b.index == ShaderSource.regex.lastIndex) {
+                    ShaderSource.regex.lastIndex++;
+                }
+
+                obj[a[1]] = {
+                    vertex: a[2].trim(),
+                    fragment: b[0].replace('---', '').trim()
+                };
+
+            }
+            onload(obj);
+    });
+}
 
 function ShaderProgram(args) { 
     this.valid = false;
