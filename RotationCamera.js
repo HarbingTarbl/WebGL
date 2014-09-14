@@ -1,72 +1,72 @@
-function CameraRotator(canvas, leftCallback, rightCallback){
-	this.mouseState = 0;
-	this.lastX = 0;
-	this.lastY = 0;
-	this.rotationQuat = quat.create();
+function CameraRotator(target, leftCallback, rightCallback){
 	this.rotationMatrix = mat4.create();
-	this.mouseButton = 0;
-    this.canvas = canvas;
-    this.rotatedXAxis = vec3.clone(brdf.xaxis);
-
-    canvas.onmousedown = (function(me){
-    	return function (e) {
-    		if(me.enabled === false)
-    			return true;
-
-        	me.mouseState = 1;
-        	me.mouseButton = e.button;
-        	me.lastX = e.clientX;
-        	me.lastY = e.clientY;
-        	return true;
-		}
-	})(this);
-
-    window.onmouseup = (function(me){
-    	return function (e) {
-    		if(me.enabled === false)
-    			return true;
-
-        	me.mouseState = 0;
-        	return true;
-    	};
-    })(this);
-
-    canvas.onmousemove = (function(me) {
-        return function (e) {
-        	if (me.enabled === false)
-        		return true;
+    this.overallRotation = quat.create();
+    this.frameRotation = quat.create();
+    this.startingRotation = quat.create();
+    this.active = false;
 
 
-            if (me.mouseState === 0)
-                return true;
+    this.start = vec2.create();
+    this.current = vec2.create();
 
-            var deltaX = e.clientX - me.lastX;
-            var deltaY = e.clientY - me.lastY;
+    this.target = target;
 
-            me.lastX = e.clientX;
-            me.lastY = e.clientY;
 
-            quat.identity(me.rotationQuat);
-            quat.rotateX(me.rotationQuat, me.rotationQuat, deltaY / 100);
-            quat.rotateY(me.rotationQuat, me.rotationQuat, deltaX / 100);
+    this.boundOnMouseMove = this.onmousemove.bind(this);
+    this.boundOnMouseUp = this.onmouseup.bind(this);
+    this.boundOnMouseDown = this.onmousedown.bind(this);
 
-            quat.normalize(me.rotationQuat, me.rotationQuat);
-            
-            mat4.fromQuat(me.rotationMatrix, me.rotationQuat);
+    target.addEventListener("mousedown", this.boundOnMouseDown, false);
+    target.addEventListener("mousemove", this.boundOnMouseMove, false);
+    window.addEventListener("mouseup", this.boundOnMouseUp, false);
+};
 
-            if (me.mouseButton === 0) { //Left Click
-            	 leftCallback(me.rotationMatrix);
 
-            } else if (me.mouseButton === 2) { //Right Click
-                rightCallback(me.rotationMatrix);
-            }
+CameraRotator.prototype.onmousedown = function(e){
+    if(e.button === 0){
+        this.active =  true;
+        this.current[0] = this.start[0] = e.clientX;
+        this.current[1] = this.start[1] = e.clientY;
+        quat.copy(this.startingRotation, this.overallRotation);
+    }
 
-            return true;
-        }
-    })(this);
+    return true;
+};
 
-    canvas.oncontextmenu = function(e){
-        return false;
-    };
+CameraRotator.prototype.onmouseup = function(e){
+    if(e.button === 0) {
+        this.active = false;
+        quat.identity(this.frameRotation);
+        quat.identity(this.overallRotation);
 
-}
+    }
+    return true;
+};
+
+CameraRotator.prototype.onmousemove = function(e){
+    this.current[0] = e.clientX;
+    this.current[1] = e.clientY;
+
+    if(!this.active)
+        return true;
+
+    quat.identity(this.frameRotation);
+    quat.rotateX(this.frameRotation, this.frameRotation, (this.current[1] - this.start[1]) / 100.0);
+    quat.rotateY(this.frameRotation, this.frameRotation, (this.current[0] - this.start[0]) / 100.0);
+
+
+
+    quat.mul(this.overallRotation, this.frameRotation, this.startingRotation)
+    quat.normalize(this.overallRotation, this.overallRotation);
+
+    mat4.fromQuat(this.rotationMatrix, this.overallRotation);
+
+    this.applyRotation(this.rotationMatrix);
+
+    return true;
+};
+
+CameraRotator.prototype.applyRotation = function(rot){
+
+
+};

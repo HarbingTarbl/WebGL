@@ -1,4 +1,4 @@
-var ArcballCamera = function(target, cameraRight, cameraUp){
+var ArcballCamera = function(target, viewInverse){
 	this.active = false;
 	this.origin = vec2.create();
 	this.start = vec2.create();
@@ -7,11 +7,12 @@ var ArcballCamera = function(target, cameraRight, cameraUp){
 	this.startSphereCoords = vec4.create();
 	this.currentSphereCoords = vec4.create();
 	this.turnstileAxis = vec4.create();
-	this.angle = 0;
-	this.cameraRight = cameraRight;
-	this.cameraUp = cameraUp;
-	this.rotationMatrix = mat4.create();
-	mat4.identity(this.rotationMatrix);
+    this.viewInverse = mat4.create();
+
+    this.rotationMatrix = mat4.create();
+    this.overallRotation = quat.create()
+    this.startingRotation = quat.create();
+    this.frameRotation = quat.create();
 
 	this.boundOnMouseMove = this.onmousemove.bind(this);
 	this.boundOnMouseUp = this.onmouseup.bind(this);
@@ -22,17 +23,25 @@ var ArcballCamera = function(target, cameraRight, cameraUp){
 	window.addEventListener("mouseup", this.boundOnMouseUp, false);
 };
 
-ArcballCamera.prototype.resetRotation = function(){
-	mat4.identity(this.rotationMatrix);
-}
+ArcballCamera.prototype.resetRotation = function() {
+    mat4.identity(this.rotationMatrix);
+};
 
-ArcballCamera.prototype.calcPoint = function(out, screen){
+ArcballCamera.prototype.calcPoint = function(screen, out){
 	vec4.set(out, 
 		(screen[0] / this.target.width) * 2 - 1,
-		(screen[1] / this.target.height) * 2 - 1, 0, 1);
+		(screen[1] / this.target.height) * -2 + 1, 0, 0);
 
-	vec4.transformMat4(out, out, this.cameraInverse);
-}
+
+    out[2] = out[0] * out[0] + out[1] * out[1];
+    if(out[2] >= 1.0){
+        out[2] = 0;
+    } else{
+        out[2] = Math.sqrt(1.0 - out[2]);
+    }
+
+    vec3.normalize(out, out);
+};
 
 
 ArcballCamera.prototype.onmousemove = function(e){
@@ -42,19 +51,21 @@ ArcballCamera.prototype.onmousemove = function(e){
 	this.current[0] = e.clientX - this.origin[0];
 	this.current[1] = e.clientY - this.origin[1];
 
+    this.calcPoint(this.current, this.currentSphereCoords);
+    this.angle = Math.acos(Math.min(vec3.dot(this.currentSphereCoords, this.startSphereCoords), 1.0));
+    vec3.cross(this.turnstileAxis, this.currentSphereCoords, this.startSphereCoords);
 
-	if(Math.abs(this.current[0] - this.start[0]) <= 0.01 || Math.abs(this.current[1] - this.start[1]) <= 0.01)
-		return true;
+
+    quat.setAxisAngle(this.frameRotation, this.turnstileAxis, this.angle * -2);
+
+    quat.normalize(this.frameRotation, this.frameRotation);
 
 
-	mat4.identity(this.rotationMatrix);
-	console.log(this.cameraUp);
-	
-	mat4.rotate(this.rotationMatrix, this.rotationMatrix, (this.current[0] - this.start[0]) / 500.0, this.cameraUp);
-	mat4.rotate(this.rotationMatrix, this.rotationMatrix, (this.current[1] - this.start[1]) / 500.0, this.cameraRight);
+    quat.mul(this.overallRotation, this.frameRotation, this.startingRotation);
 
-	this.applyRotation(this.rotationMatrix);
-	return true;
+    mat4.fromQuat(this.rotationMatrix, this.overallRotation);
+    this.applyRotation(this.rotationMatrix);
+    return true;
 };	
 
 ArcballCamera.prototype.onmousedown = function(e){
@@ -62,6 +73,8 @@ ArcballCamera.prototype.onmousedown = function(e){
 		this.active = true;
 		this.start[0] = this.current[0] = e.clientX - this.origin[0];
 		this.start[1] = this.current[1] = e.clientY - this.origin[1];
+        this.calcPoint(this.start, this.startSphereCoords);
+        quat.copy(this.startingRotation, this.overallRotation);
 	}
 	return true;
 };

@@ -84,7 +84,12 @@ void main()
 {
 	vec3 tNormal = normalize(fNormal);
 
-	gl_FragColor = vec4(uColor * clamp(dot(tNormal, uLightDirection), 0.0, 1.0), 1.0);
+    vec3 diffuseTerm = uColor * (clamp(dot(tNormal, uLightDirection), 0.0, 1.0) + 0.2);
+
+
+
+
+	gl_FragColor.rgb = clamp(pow(diffuseTerm , vec3(1.0 / 2.2)), vec3(0.0), vec3(1.0));
 }
 
 --- END ---
