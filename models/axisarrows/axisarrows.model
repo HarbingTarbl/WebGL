@@ -1,0 +1,181 @@
+{
+    "Attributes": {
+        "Normal": {
+            "Index": 1,
+            "Offset": 12,
+            "Size": 3
+        },
+        "Position": {
+            "Index": 0,
+            "Offset": 0,
+            "Size": 3
+        }
+    },
+    "Data": "axisarrows.modeldata",
+    "IndexCount": 1728,
+    "IndexOffset": 14472,
+    "IndexSize": 2,
+    "Materials": {
+        "Base": {
+            "AmbientCoeff": 0.0,
+            "AmbientColor": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "DiffuseCoeff": 0.0,
+            "DiffuseColor": [
+                0.31642600893974304,
+                0.0,
+                0.33368599414825439
+            ],
+            "DiffuseTexture": "",
+            "FresnelPower": 0.0,
+            "Name": "Base",
+            "NormalTexture": "",
+            "Roughness": 384.313720703125,
+            "ShadingModel": "",
+            "SpecularColor": [
+                0.5,
+                0.5,
+                0.5
+            ],
+            "SpecularPower": 0.0,
+            "SpecularTexture": ""
+        },
+        "XAxis": {
+            "AmbientCoeff": 0.0,
+            "AmbientColor": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "DiffuseCoeff": 0.0,
+            "DiffuseColor": [
+                0.80000001192092896,
+                0.0,
+                0.0
+            ],
+            "DiffuseTexture": "",
+            "FresnelPower": 0.0,
+            "Name": "XAxis",
+            "NormalTexture": "",
+            "Roughness": 384.313720703125,
+            "ShadingModel": "",
+            "SpecularColor": [
+                1.0,
+                1.0,
+                1.0
+            ],
+            "SpecularPower": 0.0,
+            "SpecularTexture": ""
+        },
+        "YAxis": {
+            "AmbientCoeff": 0.0,
+            "AmbientColor": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "DiffuseCoeff": 0.0,
+            "DiffuseColor": [
+                0.0,
+                0.70769202709197998,
+                0.024614999070763588
+            ],
+            "DiffuseTexture": "",
+            "FresnelPower": 0.0,
+            "Name": "YAxis",
+            "NormalTexture": "",
+            "Roughness": 384.313720703125,
+            "ShadingModel": "",
+            "SpecularColor": [
+                1.0,
+                1.0,
+                1.0
+            ],
+            "SpecularPower": 0.0,
+            "SpecularTexture": ""
+        },
+        "ZAxis": {
+            "AmbientCoeff": 0.0,
+            "AmbientColor": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "DiffuseCoeff": 0.0,
+            "DiffuseColor": [
+                0.0,
+                0.12923100590705872,
+                0.80000001192092896
+            ],
+            "DiffuseTexture": "",
+            "FresnelPower": 0.0,
+            "Name": "ZAxis",
+            "NormalTexture": "",
+            "Roughness": 384.313720703125,
+            "ShadingModel": "",
+            "SpecularColor": [
+                1.0,
+                1.0,
+                1.0
+            ],
+            "SpecularPower": 0.0,
+            "SpecularTexture": ""
+        }
+    },
+    "Meshes": [
+        {
+            "IndexCount": 36,
+            "IndexOffset": 0,
+            "Material": "Base",
+            "Name": ""
+        },
+        {
+            "IndexCount": 564,
+            "IndexOffset": 72,
+            "Material": "YAxis",
+            "Name": ""
+        },
+        {
+            "IndexCount": 564,
+            "IndexOffset": 1200,
+            "Material": "ZAxis",
+            "Name": ""
+        },
+        {
+            "IndexCount": 564,
+            "IndexOffset": 2328,
+            "Material": "XAxis",
+            "Name": ""
+        }
+    ],
+    "Name": "axisarrows",
+    "Objects": {
+        "Axis": {
+            "Meshes" : [0,1,2,3],
+            "Transform" : [
+                20.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                20.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                20.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                1.0
+            ]
+        }
+    },
+    "VertexCount": 603,
+    "VertexOffset": 0,
+    "VertexSize": 6
+}

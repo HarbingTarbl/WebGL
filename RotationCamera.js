@@ -3,11 +3,16 @@ function CameraRotator(canvas, leftCallback, rightCallback){
 	this.lastX = 0;
 	this.lastY = 0;
 	this.rotationQuat = quat.create();
+	this.rotationMatrix = mat4.create();
 	this.mouseButton = 0;
     this.canvas = canvas;
+    this.rotatedXAxis = vec3.clone(brdf.xaxis);
 
     canvas.onmousedown = (function(me){
     	return function (e) {
+    		if(me.enabled === false)
+    			return true;
+
         	me.mouseState = 1;
         	me.mouseButton = e.button;
         	me.lastX = e.clientX;
@@ -18,6 +23,9 @@ function CameraRotator(canvas, leftCallback, rightCallback){
 
     window.onmouseup = (function(me){
     	return function (e) {
+    		if(me.enabled === false)
+    			return true;
+
         	me.mouseState = 0;
         	return true;
     	};
@@ -25,6 +33,10 @@ function CameraRotator(canvas, leftCallback, rightCallback){
 
     canvas.onmousemove = (function(me) {
         return function (e) {
+        	if (me.enabled === false)
+        		return true;
+
+
             if (me.mouseState === 0)
                 return true;
 
@@ -35,13 +47,18 @@ function CameraRotator(canvas, leftCallback, rightCallback){
             me.lastY = e.clientY;
 
             quat.identity(me.rotationQuat);
-            quat.rotateX(me.rotationQuat, me.rotationQuat, deltaX);
-            quat.rotateY(me.rotationQuat, me.rotationQuat, deltaY);
+            quat.rotateX(me.rotationQuat, me.rotationQuat, deltaY / 100);
+            quat.rotateY(me.rotationQuat, me.rotationQuat, deltaX / 100);
+
+            quat.normalize(me.rotationQuat, me.rotationQuat);
+            
+            mat4.fromQuat(me.rotationMatrix, me.rotationQuat);
 
             if (me.mouseButton === 0) { //Left Click
-                leftCallback(me.rotationQuat);
+            	 leftCallback(me.rotationMatrix);
+
             } else if (me.mouseButton === 2) { //Right Click
-                rightCallback(me.rotationQuat);
+                rightCallback(me.rotationMatrix);
             }
 
             return true;

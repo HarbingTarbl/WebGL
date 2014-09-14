@@ -2,11 +2,70 @@
 <html>
 <head lang="en">
 <meta charset="UTF-8">
-<title></title>
+<style>
+
+    * {
+        margin: 0;
+        padding: 0;
+    }
+
+    body {
+        overflow-y: hidden;
+    }
+
+    body, canvas, main {
+        width: 100%;
+        height: 100%;
+    }
+
+    canvas {
+        z-index: 0;
+    }
+
+    #options {
+        position: absolute;
+        z-index: 1;
+        left: 1%;
+        top: 2%;
+        display: inline-block;
+        background-color: dimgray;
+        width: 300pt;
+        height: 150pt;
+        padding:5px;
+    }
+
+    #options * {
+        color: white;
+        background-color: dimgray;
+        font-size: 16pt;
+        font-weight: normal;
+        font-style: normal;
+        font-family: monospace;
+
+    }
+
+
+    #options input, #options select {
+        float: right;
+    }
+
+    #options div {
+
+    }
+
+    #options label {
+        float: left;
+    }
+
+    #options::after {
+        clear:both;
+    }
+
+</style>
 <title>WebGL</title>
 </head>
 <body onload="startWGL(document.querySelector('canvas'))">
-<canvas id="canvas" width="800" height="600" style="border: none; float:left;"></canvas>
+<canvas id="canvas" style="border: none; float:left;"></canvas>
 
 <script type="text/javascript" src="gl-matrix.js"></script>
 <script type="text/javascript" src="jquery.js"></script>
@@ -15,6 +74,9 @@
 <script type="text/javascript" src="BoundingVolume.js"></script>
 <script type="text/javascript" src="ModelLoader.js"></script>
 <script type="text/javascript" src="RotationCamera.js"></script>
+<script type="text/javascript" src="TexturePromise.js"></script>
+<script type="text/javascript" src="ContentLoader.js"></script>
+<script type="text/javascript" src="ArcballCamera.js"></script>
 <script type="text/javascript" src="brdf.js"></script>
 
 
