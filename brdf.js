@@ -60,7 +60,9 @@ var brdf = function () {
             me.matrices.normal = mat3.create();
             me.matrices.viewProjection = mat4.create();
             me.matrices.modelViewProjection = mat4.create();
-            me.matrices.viewProjectionInverse = mat4.create();
+            me.matrices.viewInverse = mat4.create();
+            me.matrices.cameraRight = vec4.fromValues(1,0,0,0);
+            me.matrices.cameraUp = vec4.fromValues(0,1,0,0);
 
             mat4.lookAt(me.matrices.view, [0, 0, 20.0], [0,0,0], [0,1,0]);
             mat4.perspective(me.matrices.projection, 65.0 / 180 * 3.14, canvas.width / canvas.height, 5.0, 50.0);
@@ -81,12 +83,13 @@ var brdf = function () {
             me.rotator.enabled = false;
 
 
-            me.arcball = new ArcballCamera(me.canvas, me.matrices.viewProjectionInverse);
+            me.arcball = new ArcballCamera(me.canvas, me.matrices.cameraRight, me.matrices.cameraUp);
             me.arcball.applyRotation = function(rot){
-                console.log(rot);
                 mat4.mul(me.matrices.view, me.matrices.view, rot);
                 mat4.mul(me.matrices.viewProjection, me.matrices.projection, me.matrices.view);
-                mat4.invert(me.matrices.viewProjectionInverse, me.matrices.viewProjection);
+                mat4.invert(me.matrices.viewInverse, me.matrices.view);
+                vec4.transformMat4(me.matrices.cameraRight, [1,0,0,0], me.matrices.viewInverse);
+                vec4.transformMat4(me.matrices.cameraUp, [0,1,0,0], me.matrices.viewInverse);
             };
 
             return Promise.resolve();
