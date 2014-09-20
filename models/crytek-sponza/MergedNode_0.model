@@ -1,0 +1,937 @@
+{
+    "Attributes": {
+        "Bitangent": {
+            "Index": 3,
+            "Offset": 36,
+            "Size": 3
+        },
+        "Normal": {
+            "Index": 1,
+            "Offset": 12,
+            "Size": 3
+        },
+        "Position": {
+            "Index": 0,
+            "Offset": 0,
+            "Size": 3
+        },
+        "Tangent": {
+            "Index": 2,
+            "Offset": 24,
+            "Size": 3
+        },
+        "UV0": {
+            "Index": 4,
+            "Offset": 48,
+            "Size": 2
+        }
+    },
+    "Data": "MergedNode_0.modeldata",
+    "IndexCount": 786801,
+    "IndexOffset": 11738160,
+    "IndexSize": 4,
+    "Materials": {
+        "Material__25": {
+            "AmbientCoeff": 0.0,
+            "AmbientColor": [
+                0.58799999952316284,
+                0.58799999952316284,
+                0.58799999952316284
+            ],
+            "DiffuseCoeff": 0.0,
+            "DiffuseColor": [
+                0.58799999952316284,
+                0.58799999952316284,
+                0.58799999952316284
+            ],
+            "DiffuseTexture": "textures\\lion.png",
+            "FresnelPower": 0.0,
+            "Name": "Material__25",
+            "NormalTexture": "",
+            "Roughness": 40.0,
+            "ShadingModel": "",
+            "SpecularColor": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "SpecularPower": 0.0,
+            "SpecularTexture": ""
+        },
+        "Material__298": {
+            "AmbientCoeff": 0.0,
+            "AmbientColor": [
+                0.58799999952316284,
+                0.58799999952316284,
+                0.58799999952316284
+            ],
+            "DiffuseCoeff": 0.0,
+            "DiffuseColor": [
+                0.58799999952316284,
+                0.58799999952316284,
+                0.58799999952316284
+            ],
+            "DiffuseTexture": "textures\\background.png",
+            "FresnelPower": 0.0,
+            "Name": "Material__298",
+            "NormalTexture": "",
+            "Roughness": 40.0,
+            "ShadingModel": "",
+            "SpecularColor": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "SpecularPower": 0.0,
+            "SpecularTexture": ""
+        },
+        "Material__47": {
+            "AmbientCoeff": 0.0,
+            "AmbientColor": [
+                0.58799999952316284,
+                0.58799999952316284,
+                0.58799999952316284
+            ],
+            "DiffuseCoeff": 0.0,
+            "DiffuseColor": [
+                0.58799999952316284,
+                0.58799999952316284,
+                0.58799999952316284
+            ],
+            "DiffuseTexture": "",
+            "FresnelPower": 0.0,
+            "Name": "Material__47",
+            "NormalTexture": "",
+            "Roughness": 40.0,
+            "ShadingModel": "",
+            "SpecularColor": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "SpecularPower": 0.0,
+            "SpecularTexture": ""
+        },
+        "Material__57": {
+            "AmbientCoeff": 0.0,
+            "AmbientColor": [
+                0.58799999952316284,
+                0.58799999952316284,
+                0.58799999952316284
+            ],
+            "DiffuseCoeff": 0.0,
+            "DiffuseColor": [
+                0.58799999952316284,
+                0.58799999952316284,
+                0.58799999952316284
+            ],
+            "DiffuseTexture": "textures\\vase_plant.png",
+            "FresnelPower": 0.0,
+            "Name": "Material__57",
+            "NormalTexture": "",
+            "Roughness": 40.0,
+            "ShadingModel": "",
+            "SpecularColor": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "SpecularPower": 0.0,
+            "SpecularTexture": ""
+        },
+        "arch": {
+            "AmbientCoeff": 0.0,
+            "AmbientColor": [
+                0.58799999952316284,
+                0.58799999952316284,
+                0.58799999952316284
+            ],
+            "DiffuseCoeff": 0.0,
+            "DiffuseColor": [
+                0.58799999952316284,
+                0.58799999952316284,
+                0.58799999952316284
+            ],
+            "DiffuseTexture": "textures\\sponza_arch_diff.png",
+            "FresnelPower": 0.0,
+            "Name": "arch",
+            "NormalTexture": "",
+            "Roughness": 40.0,
+            "ShadingModel": "",
+            "SpecularColor": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "SpecularPower": 0.0,
+            "SpecularTexture": ""
+        },
+        "bricks": {
+            "AmbientCoeff": 0.0,
+            "AmbientColor": [
+                0.58799999952316284,
+                0.58799999952316284,
+                0.58799999952316284
+            ],
+            "DiffuseCoeff": 0.0,
+            "DiffuseColor": [
+                0.58799999952316284,
+                0.58799999952316284,
+                0.58799999952316284
+            ],
+            "DiffuseTexture": "textures\\spnza_bricks_a_diff.png",
+            "FresnelPower": 0.0,
+            "Name": "bricks",
+            "NormalTexture": "",
+            "Roughness": 40.0,
+            "ShadingModel": "",
+            "SpecularColor": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "SpecularPower": 0.0,
+            "SpecularTexture": ""
+        },
+        "ceiling": {
+            "AmbientCoeff": 0.0,
+            "AmbientColor": [
+                0.58799999952316284,
+                0.58799999952316284,
+                0.58799999952316284
+            ],
+            "DiffuseCoeff": 0.0,
+            "DiffuseColor": [
+                0.58799999952316284,
+                0.58799999952316284,
+                0.58799999952316284
+            ],
+            "DiffuseTexture": "textures\\sponza_ceiling_a_diff.png",
+            "FresnelPower": 0.0,
+            "Name": "ceiling",
+            "NormalTexture": "",
+            "Roughness": 40.0,
+            "ShadingModel": "",
+            "SpecularColor": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "SpecularPower": 0.0,
+            "SpecularTexture": ""
+        },
+        "chain": {
+            "AmbientCoeff": 0.0,
+            "AmbientColor": [
+                0.58799999952316284,
+                0.58799999952316284,
+                0.58799999952316284
+            ],
+            "DiffuseCoeff": 0.0,
+            "DiffuseColor": [
+                0.58799999952316284,
+                0.58799999952316284,
+                0.58799999952316284
+            ],
+            "DiffuseTexture": "textures\\chain_texture.png",
+            "FresnelPower": 0.0,
+            "Name": "chain",
+            "NormalTexture": "",
+            "Roughness": 40.0,
+            "ShadingModel": "",
+            "SpecularColor": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "SpecularPower": 0.0,
+            "SpecularTexture": ""
+        },
+        "column_a": {
+            "AmbientCoeff": 0.0,
+            "AmbientColor": [
+                0.58799999952316284,
+                0.58799999952316284,
+                0.58799999952316284
+            ],
+            "DiffuseCoeff": 0.0,
+            "DiffuseColor": [
+                0.58799999952316284,
+                0.58799999952316284,
+                0.58799999952316284
+            ],
+            "DiffuseTexture": "textures\\sponza_column_a_diff.png",
+            "FresnelPower": 0.0,
+            "Name": "column_a",
+            "NormalTexture": "",
+            "Roughness": 40.0,
+            "ShadingModel": "",
+            "SpecularColor": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "SpecularPower": 0.0,
+            "SpecularTexture": ""
+        },
+        "column_b": {
+            "AmbientCoeff": 0.0,
+            "AmbientColor": [
+                0.58799999952316284,
+                0.58799999952316284,
+                0.58799999952316284
+            ],
+            "DiffuseCoeff": 0.0,
+            "DiffuseColor": [
+                0.58799999952316284,
+                0.58799999952316284,
+                0.58799999952316284
+            ],
+            "DiffuseTexture": "textures\\sponza_column_b_diff.png",
+            "FresnelPower": 0.0,
+            "Name": "column_b",
+            "NormalTexture": "",
+            "Roughness": 40.0,
+            "ShadingModel": "",
+            "SpecularColor": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "SpecularPower": 0.0,
+            "SpecularTexture": ""
+        },
+        "column_c": {
+            "AmbientCoeff": 0.0,
+            "AmbientColor": [
+                0.58799999952316284,
+                0.58799999952316284,
+                0.58799999952316284
+            ],
+            "DiffuseCoeff": 0.0,
+            "DiffuseColor": [
+                0.58799999952316284,
+                0.58799999952316284,
+                0.58799999952316284
+            ],
+            "DiffuseTexture": "textures\\sponza_column_c_diff.png",
+            "FresnelPower": 0.0,
+            "Name": "column_c",
+            "NormalTexture": "",
+            "Roughness": 40.0,
+            "ShadingModel": "",
+            "SpecularColor": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "SpecularPower": 0.0,
+            "SpecularTexture": ""
+        },
+        "details": {
+            "AmbientCoeff": 0.0,
+            "AmbientColor": [
+                0.58799999952316284,
+                0.58799999952316284,
+                0.58799999952316284
+            ],
+            "DiffuseCoeff": 0.0,
+            "DiffuseColor": [
+                0.58799999952316284,
+                0.58799999952316284,
+                0.58799999952316284
+            ],
+            "DiffuseTexture": "textures\\sponza_details_diff.png",
+            "FresnelPower": 0.0,
+            "Name": "details",
+            "NormalTexture": "",
+            "Roughness": 40.0,
+            "ShadingModel": "",
+            "SpecularColor": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "SpecularPower": 0.0,
+            "SpecularTexture": ""
+        },
+        "fabric_a": {
+            "AmbientCoeff": 0.0,
+            "AmbientColor": [
+                0.58799999952316284,
+                0.58799999952316284,
+                0.58799999952316284
+            ],
+            "DiffuseCoeff": 0.0,
+            "DiffuseColor": [
+                0.58799999952316284,
+                0.58799999952316284,
+                0.58799999952316284
+            ],
+            "DiffuseTexture": "textures\\sponza_fabric_diff.png",
+            "FresnelPower": 0.0,
+            "Name": "fabric_a",
+            "NormalTexture": "",
+            "Roughness": 40.0,
+            "ShadingModel": "",
+            "SpecularColor": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "SpecularPower": 0.0,
+            "SpecularTexture": ""
+        },
+        "fabric_c": {
+            "AmbientCoeff": 0.0,
+            "AmbientColor": [
+                0.58799999952316284,
+                0.58799999952316284,
+                0.58799999952316284
+            ],
+            "DiffuseCoeff": 0.0,
+            "DiffuseColor": [
+                0.58799999952316284,
+                0.58799999952316284,
+                0.58799999952316284
+            ],
+            "DiffuseTexture": "textures\\sponza_curtain_diff.png",
+            "FresnelPower": 0.0,
+            "Name": "fabric_c",
+            "NormalTexture": "",
+            "Roughness": 40.0,
+            "ShadingModel": "",
+            "SpecularColor": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "SpecularPower": 0.0,
+            "SpecularTexture": ""
+        },
+        "fabric_d": {
+            "AmbientCoeff": 0.0,
+            "AmbientColor": [
+                0.58799999952316284,
+                0.58799999952316284,
+                0.58799999952316284
+            ],
+            "DiffuseCoeff": 0.0,
+            "DiffuseColor": [
+                0.58799999952316284,
+                0.58799999952316284,
+                0.58799999952316284
+            ],
+            "DiffuseTexture": "textures\\sponza_fabric_blue_diff.png",
+            "FresnelPower": 0.0,
+            "Name": "fabric_d",
+            "NormalTexture": "",
+            "Roughness": 40.0,
+            "ShadingModel": "",
+            "SpecularColor": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "SpecularPower": 0.0,
+            "SpecularTexture": ""
+        },
+        "fabric_e": {
+            "AmbientCoeff": 0.0,
+            "AmbientColor": [
+                0.58799999952316284,
+                0.58799999952316284,
+                0.58799999952316284
+            ],
+            "DiffuseCoeff": 0.0,
+            "DiffuseColor": [
+                0.58799999952316284,
+                0.58799999952316284,
+                0.58799999952316284
+            ],
+            "DiffuseTexture": "textures\\sponza_fabric_green_diff.png",
+            "FresnelPower": 0.0,
+            "Name": "fabric_e",
+            "NormalTexture": "",
+            "Roughness": 40.0,
+            "ShadingModel": "",
+            "SpecularColor": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "SpecularPower": 0.0,
+            "SpecularTexture": ""
+        },
+        "fabric_f": {
+            "AmbientCoeff": 0.0,
+            "AmbientColor": [
+                0.58799999952316284,
+                0.58799999952316284,
+                0.58799999952316284
+            ],
+            "DiffuseCoeff": 0.0,
+            "DiffuseColor": [
+                0.58799999952316284,
+                0.58799999952316284,
+                0.58799999952316284
+            ],
+            "DiffuseTexture": "textures\\sponza_curtain_green_diff.png",
+            "FresnelPower": 0.0,
+            "Name": "fabric_f",
+            "NormalTexture": "",
+            "Roughness": 40.0,
+            "ShadingModel": "",
+            "SpecularColor": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "SpecularPower": 0.0,
+            "SpecularTexture": ""
+        },
+        "fabric_g": {
+            "AmbientCoeff": 0.0,
+            "AmbientColor": [
+                0.58799999952316284,
+                0.58799999952316284,
+                0.58799999952316284
+            ],
+            "DiffuseCoeff": 0.0,
+            "DiffuseColor": [
+                0.58799999952316284,
+                0.58799999952316284,
+                0.58799999952316284
+            ],
+            "DiffuseTexture": "textures\\sponza_curtain_blue_diff.png",
+            "FresnelPower": 0.0,
+            "Name": "fabric_g",
+            "NormalTexture": "",
+            "Roughness": 40.0,
+            "ShadingModel": "",
+            "SpecularColor": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "SpecularPower": 0.0,
+            "SpecularTexture": ""
+        },
+        "flagpole": {
+            "AmbientCoeff": 0.0,
+            "AmbientColor": [
+                0.58799999952316284,
+                0.58799999952316284,
+                0.58799999952316284
+            ],
+            "DiffuseCoeff": 0.0,
+            "DiffuseColor": [
+                0.58799999952316284,
+                0.58799999952316284,
+                0.58799999952316284
+            ],
+            "DiffuseTexture": "textures\\sponza_flagpole_diff.png",
+            "FresnelPower": 0.0,
+            "Name": "flagpole",
+            "NormalTexture": "",
+            "Roughness": 40.0,
+            "ShadingModel": "",
+            "SpecularColor": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "SpecularPower": 0.0,
+            "SpecularTexture": ""
+        },
+        "floor": {
+            "AmbientCoeff": 0.0,
+            "AmbientColor": [
+                0.58799999952316284,
+                0.58799999952316284,
+                0.58799999952316284
+            ],
+            "DiffuseCoeff": 0.0,
+            "DiffuseColor": [
+                0.58799999952316284,
+                0.58799999952316284,
+                0.58799999952316284
+            ],
+            "DiffuseTexture": "textures\\sponza_floor_a_diff.png",
+            "FresnelPower": 0.0,
+            "Name": "floor",
+            "NormalTexture": "",
+            "Roughness": 40.0,
+            "ShadingModel": "",
+            "SpecularColor": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "SpecularPower": 0.0,
+            "SpecularTexture": ""
+        },
+        "leaf": {
+            "AmbientCoeff": 0.0,
+            "AmbientColor": [
+                0.58799999952316284,
+                0.58799999952316284,
+                0.58799999952316284
+            ],
+            "DiffuseCoeff": 0.0,
+            "DiffuseColor": [
+                0.58799999952316284,
+                0.58799999952316284,
+                0.58799999952316284
+            ],
+            "DiffuseTexture": "textures\\sponza_thorn_diff.png",
+            "FresnelPower": 0.0,
+            "Name": "leaf",
+            "NormalTexture": "",
+            "Roughness": 40.0,
+            "ShadingModel": "",
+            "SpecularColor": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "SpecularPower": 0.0,
+            "SpecularTexture": ""
+        },
+        "roof": {
+            "AmbientCoeff": 0.0,
+            "AmbientColor": [
+                0.58799999952316284,
+                0.58799999952316284,
+                0.58799999952316284
+            ],
+            "DiffuseCoeff": 0.0,
+            "DiffuseColor": [
+                0.58799999952316284,
+                0.58799999952316284,
+                0.58799999952316284
+            ],
+            "DiffuseTexture": "textures\\sponza_roof_diff.png",
+            "FresnelPower": 0.0,
+            "Name": "roof",
+            "NormalTexture": "",
+            "Roughness": 40.0,
+            "ShadingModel": "",
+            "SpecularColor": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "SpecularPower": 0.0,
+            "SpecularTexture": ""
+        },
+        "vase": {
+            "AmbientCoeff": 0.0,
+            "AmbientColor": [
+                0.58799999952316284,
+                0.58799999952316284,
+                0.58799999952316284
+            ],
+            "DiffuseCoeff": 0.0,
+            "DiffuseColor": [
+                0.58799999952316284,
+                0.58799999952316284,
+                0.58799999952316284
+            ],
+            "DiffuseTexture": "textures\\vase_dif.png",
+            "FresnelPower": 0.0,
+            "Name": "vase",
+            "NormalTexture": "",
+            "Roughness": 40.0,
+            "ShadingModel": "",
+            "SpecularColor": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "SpecularPower": 0.0,
+            "SpecularTexture": ""
+        },
+        "vase_hanging": {
+            "AmbientCoeff": 0.0,
+            "AmbientColor": [
+                0.58799999952316284,
+                0.58799999952316284,
+                0.58799999952316284
+            ],
+            "DiffuseCoeff": 0.0,
+            "DiffuseColor": [
+                0.58799999952316284,
+                0.58799999952316284,
+                0.58799999952316284
+            ],
+            "DiffuseTexture": "textures\\vase_hanging.png",
+            "FresnelPower": 0.0,
+            "Name": "vase_hanging",
+            "NormalTexture": "",
+            "Roughness": 40.0,
+            "ShadingModel": "",
+            "SpecularColor": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "SpecularPower": 0.0,
+            "SpecularTexture": ""
+        },
+        "vase_round": {
+            "AmbientCoeff": 0.0,
+            "AmbientColor": [
+                0.58799999952316284,
+                0.58799999952316284,
+                0.58799999952316284
+            ],
+            "DiffuseCoeff": 0.0,
+            "DiffuseColor": [
+                0.58799999952316284,
+                0.58799999952316284,
+                0.58799999952316284
+            ],
+            "DiffuseTexture": "textures\\vase_round.png",
+            "FresnelPower": 0.0,
+            "Name": "vase_round",
+            "NormalTexture": "",
+            "Roughness": 40.0,
+            "ShadingModel": "",
+            "SpecularColor": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "SpecularPower": 0.0,
+            "SpecularTexture": ""
+        }
+    },
+    "Meshes": [
+        {
+            "IndexCount": 94308,
+            "IndexOffset": 0,
+            "Material": "leaf",
+            "Name": ""
+        },
+        {
+            "IndexCount": 10416,
+            "IndexOffset": 377232,
+            "Material": "Material__57",
+            "Name": ""
+        },
+        {
+            "IndexCount": 53064,
+            "IndexOffset": 418896,
+            "Material": "vase_round",
+            "Name": ""
+        },
+        {
+            "IndexCount": 12258,
+            "IndexOffset": 631152,
+            "Material": "Material__298",
+            "Name": ""
+        },
+        {
+            "IndexCount": 2388,
+            "IndexOffset": 680184,
+            "Material": "bricks",
+            "Name": ""
+        },
+        {
+            "IndexCount": 30504,
+            "IndexOffset": 689736,
+            "Material": "arch",
+            "Name": ""
+        },
+        {
+            "IndexCount": 17628,
+            "IndexOffset": 811752,
+            "Material": "ceiling",
+            "Name": ""
+        },
+        {
+            "IndexCount": 8448,
+            "IndexOffset": 882264,
+            "Material": "column_a",
+            "Name": ""
+        },
+        {
+            "IndexCount": 63,
+            "IndexOffset": 916056,
+            "Material": "floor",
+            "Name": ""
+        },
+        {
+            "IndexCount": 21264,
+            "IndexOffset": 916308,
+            "Material": "column_c",
+            "Name": ""
+        },
+        {
+            "IndexCount": 2640,
+            "IndexOffset": 1001364,
+            "Material": "details",
+            "Name": ""
+        },
+        {
+            "IndexCount": 69624,
+            "IndexOffset": 1011924,
+            "Material": "column_b",
+            "Name": ""
+        },
+        {
+            "IndexCount": 54,
+            "IndexOffset": 1290420,
+            "Material": "Material__47",
+            "Name": ""
+        },
+        {
+            "IndexCount": 49488,
+            "IndexOffset": 1290636,
+            "Material": "flagpole",
+            "Name": ""
+        },
+        {
+            "IndexCount": 49536,
+            "IndexOffset": 1488588,
+            "Material": "fabric_e",
+            "Name": ""
+        },
+        {
+            "IndexCount": 49536,
+            "IndexOffset": 1686732,
+            "Material": "fabric_d",
+            "Name": ""
+        },
+        {
+            "IndexCount": 33024,
+            "IndexOffset": 1884876,
+            "Material": "fabric_a",
+            "Name": ""
+        },
+        {
+            "IndexCount": 43008,
+            "IndexOffset": 2016972,
+            "Material": "fabric_g",
+            "Name": ""
+        },
+        {
+            "IndexCount": 56832,
+            "IndexOffset": 2189004,
+            "Material": "fabric_c",
+            "Name": ""
+        },
+        {
+            "IndexCount": 43008,
+            "IndexOffset": 2416332,
+            "Material": "fabric_f",
+            "Name": ""
+        },
+        {
+            "IndexCount": 96,
+            "IndexOffset": 2588364,
+            "Material": "chain",
+            "Name": ""
+        },
+        {
+            "IndexCount": 59484,
+            "IndexOffset": 2588748,
+            "Material": "vase_hanging",
+            "Name": ""
+        },
+        {
+            "IndexCount": 27552,
+            "IndexOffset": 2826684,
+            "Material": "vase",
+            "Name": ""
+        },
+        {
+            "IndexCount": 9126,
+            "IndexOffset": 2936892,
+            "Material": "Material__25",
+            "Name": ""
+        },
+        {
+            "IndexCount": 43452,
+            "IndexOffset": 2973396,
+            "Material": "roof",
+            "Name": ""
+        }
+    ],
+    "Name": "MergedNode_0",
+    "Objects": {
+        "Opaque": {
+            "Meshes": [
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                11,
+                12,
+                13,
+                14,
+                15,
+                16,
+                17,
+                18,
+                19,
+                20,
+                21,
+                22,
+                23,
+                24
+            ],
+            "Transform": [
+                0.1,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.1,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.1,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                1.0
+            ]
+        },
+        "Transparent" : {
+            "Meshes" : [
+                0,
+                1,
+                10
+            ],
+            "Transform" : [
+                0.1,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.1,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.1,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                1.0
+            ]
+        }
+    },
+    "VertexCount": 209610,
+    "VertexOffset": 0,
+    "VertexSize": 14
+}

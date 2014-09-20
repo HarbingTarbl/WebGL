@@ -60,7 +60,6 @@ ArcballCamera.prototype.onmousemove = function(e){
 
     quat.normalize(this.frameRotation, this.frameRotation);
 
-
     quat.mul(this.overallRotation, this.frameRotation, this.startingRotation);
 
     mat4.fromQuat(this.rotationMatrix, this.overallRotation);

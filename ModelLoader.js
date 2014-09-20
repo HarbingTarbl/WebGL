@@ -42,6 +42,7 @@ function LoadModel(path, callback){
 		}
 		var dataReq = new XMLHttpRequest();
 		var dir = path.substr(0, path.lastIndexOf('/') + 1);
+		console.log(dir);
 		dataReq.open("GET", dir + model.Data, true);
 		counter.wait();
 		dataReq.responseType = "arraybuffer";
@@ -61,10 +62,14 @@ function LoadModel(path, callback){
 			if(model.IndexSize == 1){
 				model.IndexBuffer = new Uint8Array(model.Data, model.IndexOffset, Math.round(model.IndexCount));
 				model.ElementType = gl.UNSIGNED_BYTE;
-			} else {
+			} else if(model.IndexSize == 2) {
 				model.IndexBuffer = new Uint16Array(model.Data, model.IndexOffset, Math.round(model.IndexCount));
 				model.ElementType = gl.UNSIGNED_SHORT;
+			} else if(model.IndexSize == 4) {
+				model.IndexBuffer = new Uint32Array(model.Data, model.IndexOffset, Math.round(model.IndexCount));
+				model.ElementType = gl.UNSIGNED_INT;
 			}
+
 			model.ElementBuffer = gl.createBuffer();
 			gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, model.ElementBuffer);
 			gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, model.IndexBuffer, gl.STATIC_DRAW);
@@ -105,9 +110,11 @@ function LoadModel(path, callback){
 						mat.DiffuseTexture = gl.createTexture();
 						mat.DiffuseTexture.src = oldSrc;
 						gl.bindTexture(gl.TEXTURE_2D, mat.DiffuseTexture);
-						gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, img);
+						gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
 						if(img.width % 2 === 0 && img.height % 2 === 0){
-							gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+							gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.MIRRORED_REPEAT);
+							gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.MIRRORED_REPEAT);
+							gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);
 							gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
 							gl.generateMipmap(gl.TEXTURE_2D);
 						}
@@ -121,7 +128,7 @@ function LoadModel(path, callback){
 
 						counter.signal();
 					};
-					img.src = mat.DiffuseTexture;
+					img.src = dir + mat.DiffuseTexture;
 				}(material);
 			} else{
 				material.DiffuseTexture = LoadModel.blankTexture;
@@ -136,8 +143,10 @@ function LoadModel(path, callback){
 						mat.NormalTexture = gl.createTexture();
 						mat.NormalTexture.src = oldSrc;
 						gl.bindTexture(gl.TEXTURE_2D, mat.NormalTexture);
-						gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, img);
+						gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
 						if(img.width % 2 === 0 && img.height % 2 === 0){
+							gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+							gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
 							gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
 							gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR_MIPMAP_NEAREST);
 							gl.generateMipmap(gl.TEXTURE_2D);
@@ -152,7 +161,7 @@ function LoadModel(path, callback){
 
 						counter.signal();
 					};
-					img.src = mat.NormalTexture;
+					img.src = dir + mat.NormalTexture;
 				}(material);
 			}
 			else{
@@ -170,6 +179,9 @@ function LoadModel(path, callback){
 						gl.bindTexture(gl.TEXTURE_2D, mat.SpecularTexture);
 						gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, img);
 						if(img.width % 2 === 0 && img.height % 2 === 0){
+
+							gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+							gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
 							gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
 							gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR_MIPMAP_NEAREST);
 							gl.generateMipmap(gl.TEXTURE_2D);
@@ -184,7 +196,7 @@ function LoadModel(path, callback){
 
 						counter.signal();
 					};
-					img.src = mat.SpecularTexture;
+					img.src = dir + mat.SpecularTexture;
 				}(material);
 			}
 			else{
