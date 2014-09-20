@@ -53,7 +53,7 @@ ContentLoader.Load = function(bindings, models, shaders, textures){
 			return Promise.all(me.modelsPromises).then(function(models){
 				me.model = {};
 				models.forEach(function(model){
-					me.model[model.Name] = model;
+					me.model[model.name] = model;
 					// console.log(model);
 					// for(var name in model){
 					// 	me.model[name] = model[name];

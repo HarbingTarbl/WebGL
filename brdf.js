@@ -42,14 +42,15 @@ var brdf = function () {
             antialias: true,
             stencil: false,
             depth: true,
-            alpha: true,
+            alpha: false,
             premultipliedAlpha: false,
-            preserveDrawingBuffer: false
+            preserveDrawingBuffer: true
         });
 
-        gl.clearColor(0, 0, 0, 0);
+        gl.clearColor(0, 0, 0, 1);
         gl.enable(gl.DEPTH_TEST);
-        gl.enable(gl.CULL_FACE);
+        gl.disable(gl.CULL_FACE);
+        //gl.disable(gl.CULL_FACE);
         
         //gl.enable(gl.BLEND);
         gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
@@ -65,25 +66,27 @@ var brdf = function () {
         gl.ext.element_index_uint = gl.getExtension("OES_element_index_uint");
 
 
-        var scale = window.devicePixelRatio || 1;
-        canvas.width = canvas.clientWidth * scale;
-        canvas.height = canvas.clientHeight * scale;
+        var scale = window.devicePixelRatio | 1;
+        canvas.width = window.screen.width * scale;
+        canvas.height = window.screen.height * scale;
 
         this.canvas.onresize = this.onresize;
         this.settings.width = canvas.width;
         this.settings.height = canvas.height;
 
         var meshes = [
-            "models/axisarrows/axisarrows.model",
-            "models/crytek-sponza/MergedNode_0.model"
+            "models/soldier.model"
             ];
 
         var shaders = [
-            "shaders.glsl",
-            "sponza.glsl"
+            "shaders.glsl"
             ];
 
         var init = function(){
+            var menu = document.querySelector("#modelMenu");
+            for(var meshesModelNameIndex in me.meshes){
+
+            }
             me.matrices = {};
             me.matrices.projection = mat4.create();
             me.matrices.view = mat4.create();
@@ -139,8 +142,8 @@ var brdf = function () {
             gl.bindFramebuffer(gl.FRAMEBUFFER, null);
             gl.bindTexture(gl.TEXTURE_2D, null);
 
-            mat4.lookAt(me.matrices.view, [0, 0, 20.0], [0,0,0], [0,1,0]);
-            mat4.perspective(me.matrices.projection, 65.0 / 180 * 3.14, canvas.width / canvas.height, 1.0, 500.0);
+            mat4.lookAt(me.matrices.view, [0, 0, 5.0], [0,0,0], [0,1,0]);
+            mat4.perspective(me.matrices.projection, 65.0 / 180 * 3.14, canvas.width / canvas.height, 0.01, 20.0);
 
             me.cameraVAngle = 0;
             me.cameraHAngle = 0;
@@ -178,14 +181,17 @@ var brdf = function () {
             };
 
             me.canvas.oncontextmenu = function(e){
-                return false;
+                return ["1"];
             };
 
-            me.canvas.onmousewheel = function(e){
-                me.translation[2] += e.wheelDelta * 0.1;
-            }
+            me.canvas.addEventListener("DOMMouseScroll", function(e){
+                me.translation[2] += e.detail * 0.1;
+            }, false);
+            me.canvas.addEventListener("mousewheel", function(e){
+                me.translation[2] += e.wheelDelta * 0.001;
+            }, false);
 
-
+            me.activeModel = "soldier";
 
             return Promise.resolve();
         };
@@ -201,21 +207,23 @@ var brdf = function () {
                 }
                 return Promise.resolve();
             }).then(init).then(me.draw).catch(function(a){
-                console.log("%cError during inital draw call\n" + a, "color:red");
+                console.log("%cError during inital draw call\n" + a.fileName + " " +  a.lineNumber + " " + a, "color:red");
             });
 
         me.drawAxisObject = function(axis){
-            mat4.mul(me.matrices.modelViewProjection, me.matrices.viewProjection, axis.Transform);
+            mat4.mul(me.matrices.modelViewProjection, me.matrices.viewProjection, axis.transform);
             axis.UpdateNormal();
             me.activeProgram.uniform.uMVPMatrix = me.matrices.modelViewProjection;
-            me.activeProgram.uniform.uNormalMatrix = axis.NormalMatrix;
+            me.activeProgram.uniform.uNormalMatrix = axis.normalMatrix;
         };
 
         me.drawAxisMesh = function(mesh){
             me.activeProgram.uniform.uColor = [1,1,1];
+            me.activeProgram.sampler.diffuse0 = mesh.material.textures.diffuse0;
         };
 
         me.sponzaDraw = new sponzaDrawHandler();
+        me.sunDirection = vec3.fromValues(0.57735, 0.57735, 0.57735);
     };
 
     me.draw = function(){
@@ -223,21 +231,23 @@ var brdf = function () {
         gl.viewport(0, 0, brdf.settings.width, brdf.settings.height);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-        me.activeProgram = me.program.SponzaBlinn;
+        me.activeProgram = me.program.DLDO;
 
         mat4.translate(me.matrices.activeView, me.matrices.view, me.translation);
         mat4.rotateX(me.matrices.activeView, me.matrices.activeView, me.cameraHAngle);
         mat4.rotateY(me.matrices.activeView, me.matrices.activeView, me.cameraVAngle);
 
-
         mat4.mul(me.matrices.viewProjection, me.matrices.projection, me.matrices.activeView);
 
-        me.model.MergedNode_0.BindBuffers();
-
         me.activeProgram.use();
-        gl.disable(gl.BLEND);
-        me.model.MergedNode_0.Objects.Opaque.Draw(me.sponzaDraw.sponzaDrawObj, me.sponzaDraw.sponzaDrawMesh);
+        me.activeProgram.uniform.uLightDirection = me.sunDirection;
 
+        if(me.activeModel != ""){
+            var model = me.model[me.activeModel];
+            model.BindBuffers();
+            model.Draw(me.drawAxisObject, me.drawAxisMesh);
+        }
+        
         window.requestAnimationFrame(me.draw);
     }
 

@@ -43,75 +43,73 @@ function LoadModel(path, callback){
 		var dataReq = new XMLHttpRequest();
 		var dir = path.substr(0, path.lastIndexOf('/') + 1);
 		console.log(dir);
-		dataReq.open("GET", dir + model.Data, true);
+		dataReq.open("GET", dir + model.data, true);
 		counter.wait();
 		dataReq.responseType = "arraybuffer";
 		dataReq.onload = function(e) {
-			model.Data = dataReq.response;
-			model.VertexBuffer = new Float32Array(model.Data, model.VertexOffset, Math.round(model.VertexCount * model.VertexSize));
-			model.ArrayBuffer = gl.createBuffer();
-			gl.bindBuffer(gl.ARRAY_BUFFER, model.ArrayBuffer);
-			gl.bufferData(gl.ARRAY_BUFFER, model.VertexBuffer, gl.STATIC_DRAW);
+			model.data = dataReq.response;
+			model.vertexBuffer = new Float32Array(model.data, model.vertexOffset, Math.round(model.vertexCount * model.vertexSize / 4.0));
+			model.arrayBuffer = gl.createBuffer();
+			gl.bindBuffer(gl.ARRAY_BUFFER, model.arrayBuffer);
+			gl.bufferData(gl.ARRAY_BUFFER, model.vertexBuffer, gl.STATIC_DRAW);
 
-			for(var attrName in model.Attributes){
-				var attr = model.Attributes[attrName];
-				gl.enableVertexAttribArray(attr.Index);
-				gl.vertexAttribPointer(attr.Index, attr.Size, gl.FLOAT, false, 4 * model.VertexSize, attr.Offset);
+			for(var attrName in model.attributes){
+				var attr = model.attributes[attrName];
+				gl.enableVertexAttribArray(attr.index);
+				gl.vertexAttribPointer(attr.index, attr.size, gl.FLOAT, false, 4 * model.vertexSize, attr.offset);
 			}
 
-			if(model.IndexSize == 1){
-				model.IndexBuffer = new Uint8Array(model.Data, model.IndexOffset, Math.round(model.IndexCount));
-				model.ElementType = gl.UNSIGNED_BYTE;
-			} else if(model.IndexSize == 2) {
-				model.IndexBuffer = new Uint16Array(model.Data, model.IndexOffset, Math.round(model.IndexCount));
-				model.ElementType = gl.UNSIGNED_SHORT;
-			} else if(model.IndexSize == 4) {
-				model.IndexBuffer = new Uint32Array(model.Data, model.IndexOffset, Math.round(model.IndexCount));
-				model.ElementType = gl.UNSIGNED_INT;
+			if(model.indexSize == 1){
+				model.indexBuffer = new Uint8Array(model.data, model.indexOffset, Math.round(model.indexCount));
+				model.elementType = gl.UNSIGNED_BYTE;
+			} else if(model.indexSize == 2) {
+				model.indexBuffer = new Uint16Array(model.data, model.indexOffset, Math.round(model.indexCount));
+				model.elementType = gl.UNSIGNED_SHORT;
+			} else if(model.indexSize == 4) {
+				model.indexBuffer = new Uint32Array(model.data, model.indexOffset, Math.round(model.indexCount));
+				model.elementType = gl.UNSIGNED_INT;
 			}
 
-			model.ElementBuffer = gl.createBuffer();
-			gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, model.ElementBuffer);
-			gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, model.IndexBuffer, gl.STATIC_DRAW);
+			model.elementBuffer = gl.createBuffer();
+			gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, model.elementBuffer);
+			gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, model.indexBuffer, gl.STATIC_DRAW);
 
 			gl.bindBuffer(gl.ARRAY_BUFFER, null);
 			gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
 
 			model.VertexSize = 4 * model.VertexSize;
 
-			delete(model.IndexOffset);
-			delete(model.IndexBuffer);
-			delete(model.VertexOffset);
-			delete(model.VertexBuffer);
-			delete(model.IndexSize);
-			delete(model.Data);
+			delete(model.indexOffset);
+			delete(model.indexBuffer);
+			delete(model.vertexOffset);
+			delete(model.vertexBuffer);
+			delete(model.indexSize);
+			delete(model.data);
 
 			model.BindBuffers = function() {
-				gl.bindBuffer(gl.ARRAY_BUFFER, this.ArrayBuffer);
-				for(var attrName in this.Attributes){
-					var attr = this.Attributes[attrName];
-					gl.vertexAttribPointer(attr.Index, attr.Size, gl.FLOAT, false, this.VertexSize, attr.Offset);
+				gl.bindBuffer(gl.ARRAY_BUFFER, this.arrayBuffer);
+				for(var attrName in this.attributes){
+					var attr = this.attributes[attrName];
+					gl.vertexAttribPointer(attr.index, attr.size, gl.FLOAT, false, this.vertexSize, attr.offset);
 				}
-				gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.ElementBuffer);
+				gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.elementBuffer);
 			};
 			counter.signal();
 		};
 
 		dataReq.send();
-		for(var materialName in model.Materials) {
-			var material = model.Materials[materialName];
-
-			if(material.DiffuseTexture != ""){
+		for(var materialName in model.materials) {
+			var material = model.materials[materialName];
+			for(var textureName in material.textures){
 				counter.wait();
-				!function(mat){
-					var img = new Image();
-					img.onload = function() {
-						var oldSrc = dir + mat.DiffuseTexture;
-						mat.DiffuseTexture = gl.createTexture();
-						mat.DiffuseTexture.src = oldSrc;
-						gl.bindTexture(gl.TEXTURE_2D, mat.DiffuseTexture);
-						gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
-						if(img.width % 2 === 0 && img.height % 2 === 0){
+				var img = new Image();
+				img.onload = (function(material, name){
+					return function(){
+						var texture = gl.createTexture();
+
+						gl.bindTexture(gl.TEXTURE_2D, texture);
+						gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this);
+						if(this.width % 2 === 0 && this.height % 2 === 0){
 							gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.MIRRORED_REPEAT);
 							gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.MIRRORED_REPEAT);
 							gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);
@@ -125,120 +123,56 @@ function LoadModel(path, callback){
 							gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 						}
 						gl.bindTexture(gl.TEXTURE_2D, null);
-
+						material.textures[name] = texture;
 						counter.signal();
 					};
-					img.src = dir + mat.DiffuseTexture;
-				}(material);
-			} else{
-				material.DiffuseTexture = LoadModel.blankTexture;
-			}
-			
-			if(material.NormalTexture != ""){
-				counter.wait();
-				!function(mat){
-					var img = new Image();
-					img.onload = function() {
-						var oldSrc = dir + mat.NormalTexture;
-						mat.NormalTexture = gl.createTexture();
-						mat.NormalTexture.src = oldSrc;
-						gl.bindTexture(gl.TEXTURE_2D, mat.NormalTexture);
-						gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
-						if(img.width % 2 === 0 && img.height % 2 === 0){
-							gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
-							gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
-							gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-							gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR_MIPMAP_NEAREST);
-							gl.generateMipmap(gl.TEXTURE_2D);
-						}
-						else{
-							gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-							gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-							gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-							gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-						}
-						gl.bindTexture(gl.TEXTURE_2D, null);
-
+				})(material, textureName);
+				img.onerror = (function(material, name){
+					return function(){
+						material.textures[textureName] = LoadModel.blankTexture;
 						counter.signal();
+						console.log("Missing texture ", name);
 					};
-					img.src = dir + mat.NormalTexture;
-				}(material);
-			}
-			else{
-				material.NormalTexture = LoadModel.blankTexture;
-			}
-
-			if(material.SpecularTexture != ""){
-				counter.wait();
-				!function(mat){
-					var img = new Image();
-					img.onload = function() {
-						var oldSrc = dir + mat.SpecularTexture;
-						mat.SpecularTexture = gl.createTexture();
-						mat.SpecularTexture.src = oldSrc;
-						gl.bindTexture(gl.TEXTURE_2D, mat.SpecularTexture);
-						gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, img);
-						if(img.width % 2 === 0 && img.height % 2 === 0){
-
-							gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
-							gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
-							gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-							gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR_MIPMAP_NEAREST);
-							gl.generateMipmap(gl.TEXTURE_2D);
-						}
-						else{
-							gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-							gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-							gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-							gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-						}
-						gl.bindTexture(gl.TEXTURE_2D, null);
-
-						counter.signal();
-					};
-					img.src = dir + mat.SpecularTexture;
-				}(material);
-			}
-			else{
-				material.SpecularTexture = LoadModel.blankTexture;
+				})(material, textureName);
+				img.src = dir + material.textures[textureName];
 			}
 		}
 
-		for(var meshIndex in model.Meshes) {
-			var mesh = model.Meshes[meshIndex];
-			mesh.Material = model.Materials[mesh.Material];
+		for(var meshIndex in model.meshes) {
+			var mesh = model.meshes[meshIndex];
+			mesh.material = model.materials[mesh.material];
 			mesh.Draw = function(perMesh){
 				perMesh(this);
-				gl.drawElements(gl.TRIANGLES, this.IndexCount, model.ElementType, this.IndexOffset);
+				gl.drawElements(gl.TRIANGLES, this.indexCount, model.elementType, this.indexOffset);
 			};
 		}
 
-		for(var objectIndex in model.Objects){
-			var objectElement = model.Objects[objectIndex];
-			objectElement.Transform = new Float32Array(objectElement.Transform);
-			objectElement.NormalMatrix = mat3.create();
+		for(var objectIndex in model.objects){
+			var objectElement = model.objects[objectIndex];
+			objectElement.transform = new Float32Array(objectElement.transform);
+			objectElement.normalMatrix = mat3.create();
 			objectElement.UpdateNormal = function(){
-				mat3.fromMat4(this.NormalMatrix, this.Transform);
-				mat3.invert(this.NormalMatrix, this.NormalMatrix);
-				mat3.transpose(this.NormalMatrix, this.NormalMatrix);
+				mat3.fromMat4(this.normalMatrix, this.transform);
+				mat3.invert(this.normalMatrix, this.normalMatrix);
+				mat3.transpose(this.normalMatrix, this.normalMatrix);
 			};
 
-			for(var objectIndexMeshIndex in objectElement.Meshes){
-				var objectMeshIndex = objectElement.Meshes[objectIndexMeshIndex];
-				objectElement.Meshes[objectIndexMeshIndex] = model.Meshes[objectMeshIndex];
+			for(var objectIndexMeshIndex in objectElement.meshes){
+				var objectMeshIndex = objectElement.meshes[objectIndexMeshIndex];
+				objectElement.meshes[objectIndexMeshIndex] = model.meshes[objectMeshIndex];
 			}
 
 			objectElement.Draw = function(perObject, perMesh){
 				perObject(this);
-				for(var meshIndex in this.Meshes){
-					this.Meshes[meshIndex].Draw(perMesh);
+				for(var meshIndex in this.meshes){
+					this.meshes[meshIndex].Draw(perMesh);
 				};
 			};
 		};
 
 		model.Draw = function(perObject, perMesh){
-			for(var objectIndex in this.Objects){
-				this.Objects[objectIndex].Draw(perObject, perMesh);
+			for(var objectIndex in this.objects){
+				this.objects[objectIndex].Draw(perObject, perMesh);
 			}
 		};
 
