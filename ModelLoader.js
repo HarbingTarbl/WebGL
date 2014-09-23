@@ -14,7 +14,6 @@ function LoadModel(path, callback){
 	var counter = {
 		signal: function(){
 			this.value--;
-			console.log(this.value, " ↓");
 
 			if(this.value == 0){
 				callback(model);
@@ -25,7 +24,6 @@ function LoadModel(path, callback){
 		},
 		wait: function(){
 			this.value++;
-			console.log(this.value, " ↑");
 		},
 		value: 0, //What value should this be? Who knows! Guess until the page works again. 
 	};
@@ -77,14 +75,12 @@ function LoadModel(path, callback){
 			gl.bindBuffer(gl.ARRAY_BUFFER, null);
 			gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
 
-			model.VertexSize = 4 * model.VertexSize;
-
-			delete(model.indexOffset);
-			delete(model.indexBuffer);
-			delete(model.vertexOffset);
-			delete(model.vertexBuffer);
-			delete(model.indexSize);
-			delete(model.data);
+			model.indexOffset = null;
+			model.indexBuffer = null;
+			model.vertexOffset = null;
+			model.vertexBuffer = null;
+			model.indexSize = null;
+			model.data = null;
 
 			model.BindBuffers = function() {
 				gl.bindBuffer(gl.ARRAY_BUFFER, this.arrayBuffer);
@@ -131,7 +127,7 @@ function LoadModel(path, callback){
 					return function(){
 						material.textures[textureName] = LoadModel.blankTexture;
 						counter.signal();
-						console.log("Missing texture ", name);
+						console.log("Missing texture ", img.src);
 					};
 				})(material, textureName);
 				img.src = dir + material.textures[textureName];

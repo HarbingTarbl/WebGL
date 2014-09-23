@@ -50,10 +50,6 @@ var brdf = function () {
         gl.clearColor(0, 0, 0, 1);
         gl.enable(gl.DEPTH_TEST);
         gl.disable(gl.CULL_FACE);
-        //gl.disable(gl.CULL_FACE);
-        
-        //gl.enable(gl.BLEND);
-        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
         gl.ext = {};
         gl.ext.texture_float = gl.getExtension("OES_texture_float");
@@ -75,7 +71,7 @@ var brdf = function () {
         this.settings.height = canvas.height;
 
         var meshes = [
-            "models/soldier.model"
+            "models/crytek-sponza/sponza.model"
             ];
 
         var shaders = [
@@ -83,121 +79,104 @@ var brdf = function () {
             ];
 
         var init = function(){
-            var menu = document.querySelector("#modelMenu");
-            for(var meshesModelNameIndex in me.meshes){
+        	var pointerLock = 'pointerLockElement' in document ||
+        		'webkitPointerLockElement' in document ||
+        		'mozPointerLockElement' in document;
 
-            }
+        	if(pointerLock){
+        		me.canvas.requestPointerLock = me.canvas.requestPointerLock ||
+        			me.canvas.mozRequestPointerLock ||
+        			me.canvas.webkitRequestPointerLock;
+
+                document.pointerLockElement = document.pointerLockElement ||
+                    document.mozPointerLockElement ||
+                    document.webkitPointerLockElement;
+
+        		document.exitPointerLock = document.exitPointerLock || 
+        			document.mozExitPointerLock ||
+        			document.webkitExitPointerLock;
+        		me.pointerIsLocked = false;
+        	}
+        	else{
+        		me.canvas.requestPointerLock = function(){};
+        		document.exitPointerLock = function(){};
+        		me.pointerIsLocked = true;
+        	}
+
             me.matrices = {};
+            me.event = {};
+            me.keys = new Int8Array(255);
+            
             me.matrices.projection = mat4.create();
             me.matrices.view = mat4.create();
             me.matrices.model = mat4.create();
             me.matrices.normal = mat3.create();
             me.matrices.viewProjection = mat4.create();
             me.matrices.modelViewProjection = mat4.create();
-            me.matrices.viewInverse = mat4.create();
-            me.matrices.activeView = mat4.create();
-            me.matrices.accRotation = mat4.create();
-            me.translation = vec3.create();
 
+            me.camera = new Camera(75, me.canvas.width / me.canvas.height, 20, 2000);
+            me.camera.offsetPosition(0,0,3);
 
-            me.framebuffer = {};
-            me.framebuffer.base = {};
-            var base = me.framebuffer.base;
-
-
-            base.depthTexture = gl.createTexture();
-            gl.bindTexture(gl.TEXTURE_2D, base.depthTexture);
-            gl.texImage2D(gl.TEXTURE_2D, 0, gl.DEPTH_COMPONENT, me.canvas.width, me.canvas.height, 0, gl.DEPTH_COMPONENT, gl.UNSIGNED_INT, null);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-
-            base.colorTexture = gl.createTexture();
-            gl.bindTexture(gl.TEXTURE_2D, base.colorTexture);
-            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, me.canvas.width, me.canvas.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-
-            base.normalTexture = gl.createTexture();
-            gl.bindTexture(gl.TEXTURE_2D, base.normalTexture);
-            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, me.canvas.width, me.canvas.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-
-            base.framebuffer = gl.createFramebuffer();
-            gl.bindFramebuffer(gl.FRAMEBUFFER, base.framebuffer);
-            gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, base.colorTexture, 0);
-            gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0 + 1, gl.TEXTURE_2D, base.normalTexture, 0);
-            gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, base.depthTexture, 0);
-
-            if(gl.checkFramebufferStatus(gl.FRAMEBUFFER) != gl.FRAMEBUFFER_COMPLETE){
-                Error("Bad framebuffer");
-            }
-
-            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-            gl.bindTexture(gl.TEXTURE_2D, null);
-
-            mat4.lookAt(me.matrices.view, [0, 0, 5.0], [0,0,0], [0,1,0]);
-            mat4.perspective(me.matrices.projection, 65.0 / 180 * 3.14, canvas.width / canvas.height, 0.01, 20.0);
-
-            me.cameraVAngle = 0;
-            me.cameraHAngle = 0;
-
-            me.canvas.mouseState = 0;
-            me.canvas.objectRotation = mat4.create();
-            me.canvas.onmousedown = function (e) {
-                me.canvas.mouseState = 1;
-                me.canvas.mouseButton = e.button;
-                me.canvas.mouseX = e.clientX;
-                me.canvas.mouseY = e.clientY;
-                return true;
+            me.event.mousedown  = function(e){
+            	me.canvas.requestPointerLock();
+            	return true;
             };
 
-            window.onmouseup = function (e) {
-                me.canvas.mouseState = 0;
-                return true;
+            me.event.mouseup = function(e){
+            	return true;
             };
 
-            me.canvas.onmousemove = function(e){
-                if(canvas.mouseState === 0)
-                    return true;
+            me.event.mousemove = function(e){
+            	if(me.pointerIsLocked === false){
+            		return true;
+            	}
 
-                var deltaX = e.clientX - me.canvas.mouseX;
-                var deltaY = e.clientY - me.canvas.mouseY;
-                me.canvas.mouseX = e.clientX;
-                me.canvas.mouseY = e.clientY;
-
-                if(me.canvas.mouseButton === 0){ //Left Click
-                    me.cameraVAngle += deltaX / 200.0;
-                    me.cameraHAngle += deltaY / 200.0;
-                }
-
-                return true;
+            	me.camera.offsetPitch(e.movementX / 200.0);
+            	me.camera.offsetYaw(e.movementY / 200.0);
+            	return true;
             };
 
-            me.canvas.oncontextmenu = function(e){
-                return ["1"];
+            me.event.pointerLockChange = function(e){
+            	if(document.pointerLockElement === me.canvas){
+            		me.pointerIsLocked = true;
+            	}
+            	else{
+            		me.pointerIsLocked = false;
+            	}
+            	return true;
             };
 
-            me.canvas.addEventListener("DOMMouseScroll", function(e){
-                me.translation[2] += e.detail * 0.1;
-            }, false);
-            me.canvas.addEventListener("mousewheel", function(e){
-                me.translation[2] += e.wheelDelta * 0.001;
-            }, false);
+            me.event.keydown = function(e){
+            	this.keys[e.keyCode] = true;
 
-            me.activeModel = "soldier";
+            	return true;
+            };
+
+            me.event.keyup = function(e){
+            	this.keys[e.keyCode] = false;
+            	return true;
+            };
+
+            me.canvas.addEventListener('mousedown', me.event.mousedown.bind(me), false);
+            me.canvas.addEventListener('mouseup', me.event.mouseup.bind(me), false);
+            me.canvas.addEventListener('mousemove', me.event.mousemove.bind(me), false);
+            document.addEventListener('keydown', me.event.keydown.bind(me), false);
+            document.addEventListener('keyup', me.event.keyup.bind(me), false);
+
+            var pointerLock = me.event.pointerLockChange.bind(me);
+            document.addEventListener('pointerlockchange', pointerLock, false);
+            document.addEventListener('webkitpointerlockchange', pointerLock, false);
+            document.addEventListener('mozpointerlockchange', pointerLock, false);
 
             return Promise.resolve();
         };
 
         ContentLoader.Load(
-            [["vPosition", 0], ["vNormal", 1], ["vTexture", 4]],
+            [["vPosition", 0], 
+            ["vNormal", 1], 
+            ["vTangent", 2],
+            ["vBitangent", 3],
+            ["vTexture", 4]],
             meshes,
             shaders).then(function(content){
                 for(var x in content){
@@ -233,23 +212,39 @@ var brdf = function () {
 
         me.activeProgram = me.program.DLDO;
 
-        mat4.translate(me.matrices.activeView, me.matrices.view, me.translation);
-        mat4.rotateX(me.matrices.activeView, me.matrices.activeView, me.cameraHAngle);
-        mat4.rotateY(me.matrices.activeView, me.matrices.activeView, me.cameraVAngle);
+        if(me.keys[87]){
+        	vec3.scaleAndAdd(me.camera.position(), me.camera.position(), me.camera.forward(), 5.0);
+    	}
+    	else if(me.keys[83]){
+    		vec3.scaleAndAdd(me.camera.position(), me.camera.position(), me.camera.forward(), -5.0);
+    	}
+    	else if(me.keys[68]){
+    		vec3.scaleAndAdd(me.camera.position(), me.camera.position(), me.camera.right(), 5.0);
+    	}
+    	else if(me.keys[65]){
+    		vec3.scaleAndAdd(me.camera.position(), me.camera.position(), me.camera.right(), -5.0);
+    	}
+    	else if(me.keys[70]){
+    		vec3.scaleAndAdd(me.camera.position(), me.camera.position(), me.camera.up(), -5.0);
+    	}
+    	else if(me.keys[82]){
+    		vec3.scaleAndAdd(me.camera.position(), me.camera.position(), me.camera.up(), 5.0);
+    	}
 
-        mat4.mul(me.matrices.viewProjection, me.matrices.projection, me.matrices.activeView);
+
+    	me.camera.setNeedsUpdate();
+        me.matrices.viewProjection = me.camera.camera();
 
         me.activeProgram.use();
         me.activeProgram.uniform.uLightDirection = me.sunDirection;
 
-        if(me.activeModel != ""){
-            var model = me.model[me.activeModel];
-            model.BindBuffers();
-            model.Draw(me.drawAxisObject, me.drawAxisMesh);
-        }
-        
+        var model = me.model.sponza;
+        model.BindBuffers();
+        model.Draw(me.drawAxisObject, me.drawAxisMesh);
         window.requestAnimationFrame(me.draw);
-    }
+    };
+
+    me.draw.deltaMove = vec3.create();
 
     return me;
 };

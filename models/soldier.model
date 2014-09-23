@@ -1,0 +1,373 @@
+{
+    "attributes": {
+        "bitangent": {
+            "index": 3,
+            "offset": 36,
+            "size": 3
+        },
+        "normal": {
+            "index": 1,
+            "offset": 12,
+            "size": 3
+        },
+        "position": {
+            "index": 0,
+            "offset": 0,
+            "size": 3
+        },
+        "tangent": {
+            "index": 2,
+            "offset": 24,
+            "size": 3
+        },
+        "uv0": {
+            "index": 4,
+            "offset": 48,
+            "size": 2
+        }
+    },
+    "data": "soldier.modeldata",
+    "indexCount": 28362,
+    "indexOffset": 703080,
+    "indexSize": 2,
+    "materials": {
+        "Arma_Material": {
+            "ambientCoeff": 0.0,
+            "ambientColor": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "diffuseCoeff": 0.0,
+            "diffuseColor": [
+                0.63999998569488525,
+                0.63999998569488525,
+                0.63999998569488525
+            ],
+            "fresnelPower": 0.0,
+            "name": "Arma_Material",
+            "roughness": 384.313720703125,
+            "shadingModel": "",
+            "specularColor": [
+                0.5,
+                0.5,
+                0.5
+            ],
+            "specularPower": 0.0,
+            "textures": {
+                "diffuse0": "textures/bauer_gear_co.png"
+            }
+        },
+        "Arma_Material.001": {
+            "ambientCoeff": 0.0,
+            "ambientColor": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "diffuseCoeff": 0.0,
+            "diffuseColor": [
+                0.63999998569488525,
+                0.63999998569488525,
+                0.63999998569488525
+            ],
+            "fresnelPower": 0.0,
+            "name": "Arma_Material.001",
+            "roughness": 384.313720703125,
+            "shadingModel": "",
+            "specularColor": [
+                0.5,
+                0.5,
+                0.5
+            ],
+            "specularPower": 0.0,
+            "textures": {
+                "diffuse0": "textures/bauer_co.png"
+            }
+        },
+        "Arma_Material.003": {
+            "ambientCoeff": 0.0,
+            "ambientColor": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "diffuseCoeff": 0.0,
+            "diffuseColor": [
+                0.63999998569488525,
+                0.63999998569488525,
+                0.63999998569488525
+            ],
+            "fresnelPower": 0.0,
+            "name": "Arma_Material.003",
+            "roughness": 384.313720703125,
+            "shadingModel": "",
+            "specularColor": [
+                0.5,
+                0.5,
+                0.5
+            ],
+            "specularPower": 0.0,
+            "textures": {
+                "diffuse0": "textures/hhl_06_co.png"
+            }
+        },
+        "Arma_Material.010": {
+            "ambientCoeff": 0.0,
+            "ambientColor": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "diffuseCoeff": 0.0,
+            "diffuseColor": [
+                0.63999998569488525,
+                0.63999998569488525,
+                0.63999998569488525
+            ],
+            "fresnelPower": 0.0,
+            "name": "Arma_Material.010",
+            "roughness": 384.313720703125,
+            "shadingModel": "",
+            "specularColor": [
+                0.5,
+                0.5,
+                0.5
+            ],
+            "specularPower": 0.0,
+            "textures": {
+                "diffuse0" : "textures/headgear_co.png"
+            }
+        },
+        "JoinedMaterial_#5": {
+            "ambientCoeff": 0.0,
+            "ambientColor": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "diffuseCoeff": 0.0,
+            "diffuseColor": [
+                0.63999998569488525,
+                0.63999998569488525,
+                0.63999998569488525
+            ],
+            "fresnelPower": 0.0,
+            "name": "JoinedMaterial_#5",
+            "roughness": 384.313720703125,
+            "shadingModel": "",
+            "specularColor": [
+                0.5,
+                0.5,
+                0.5
+            ],
+            "specularPower": 0.0,
+            "textures": {
+                "diffuse0": "textures/acr_equip_co.png"
+            }
+        }
+    },
+    "meshes": [
+        {
+            "indexCount": 6789,
+            "indexOffset": 0,
+            "material": "Arma_Material",
+            "name": ""
+        },
+        {
+            "indexCount": 13197,
+            "indexOffset": 13578,
+            "material": "Arma_Material.001",
+            "name": ""
+        },
+        {
+            "indexCount": 3042,
+            "indexOffset": 39972,
+            "material": "Arma_Material.010",
+            "name": ""
+        },
+        {
+            "indexCount": 2676,
+            "indexOffset": 46056,
+            "material": "Arma_Material.003",
+            "name": ""
+        },
+        {
+            "indexCount": 2604,
+            "indexOffset": 51408,
+            "material": "JoinedMaterial_#5",
+            "name": ""
+        },
+        {
+            "indexCount": 54,
+            "indexOffset": 56616,
+            "material": "JoinedMaterial_#5",
+            "name": ""
+        }
+    ],
+    "name": "soldier",
+    "objects": {
+        "g 1_1_Arma_Material": {
+            "meshes": [
+                0
+            ],
+            "transform": [
+                1.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                1.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                1.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                1.0
+            ]
+        },
+        "g 1_1_Arma_Material.001": {
+            "meshes": [
+                1
+            ],
+            "transform": [
+                1.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                1.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                1.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                1.0
+            ]
+        },
+        "g 1_1_Arma_Material.003": {
+            "meshes": [
+                3
+            ],
+            "transform": [
+                1.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                1.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                1.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                1.0
+            ]
+        },
+        "g 1_1_Arma_Material.004": {
+            "meshes": [
+                4
+            ],
+            "transform": [
+                1.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                1.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                1.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                1.0
+            ]
+        },
+        "g 1_1_Arma_Material.005": {
+            "meshes": [
+                5
+            ],
+            "transform": [
+                1.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                1.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                1.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                1.0
+            ]
+        },
+        "g 1_1_Arma_Material.010": {
+            "meshes": [
+                2
+            ],
+            "transform": [
+                1.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                1.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                1.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                1.0
+            ]
+        },
+        "soldier.obj": {
+            "meshes": [],
+            "transform": [
+                1.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                1.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                1.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                1.0
+            ]
+        }
+    },
+    "vertexCount": 12555,
+    "vertexOffset": 0,
+    "vertexSize": 56
+}
