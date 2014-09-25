@@ -44,7 +44,7 @@ var brdf = function () {
             depth: true,
             alpha: false,
             premultipliedAlpha: false,
-            preserveDrawingBuffer: true
+            preserveDrawingBuffer: false
         });
 
         gl.clearColor(0, 0, 0, 1);
