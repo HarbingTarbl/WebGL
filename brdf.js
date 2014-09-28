@@ -2,21 +2,6 @@
 var gl;
 var globalGLError;
 
-
-var sponzaDrawHandler = function(){
-    this.program = null;
-    this.model = null;
-};
-
-sponzaDrawHandler.prototype.sponzaDrawObj = function(object){
-    mat4.mul(brdf.matrices.modelViewProjection, brdf.matrices.viewProjection, object.Transform);
-    brdf.activeProgram.uniform.uMVPMatrix = brdf.matrices.modelViewProjection;
-};
-
-sponzaDrawHandler.prototype.sponzaDrawMesh = function(object){
-    brdf.activeProgram.sampler.sAlbedo = object.Material.DiffuseTexture;
-};
-
 var brdf = function () {
     var me = {};
 
@@ -39,7 +24,7 @@ var brdf = function () {
 
         this.canvas = canvas;
         gl = canvas.getContext("experimental-webgl", {
-            antialias: true,
+            antialias: false,
             stencil: false,
             depth: true,
             alpha: false,
@@ -63,8 +48,8 @@ var brdf = function () {
 
 
         var scale = window.devicePixelRatio | 1;
-        canvas.width = window.screen.width * scale;
-        canvas.height = window.screen.height * scale;
+        canvas.width = window.screen.width * scale * 0.5;
+        canvas.height = window.screen.height * scale * 0.5;
 
         this.canvas.onresize = this.onresize;
         this.settings.width = canvas.width;
@@ -106,6 +91,23 @@ var brdf = function () {
             me.matrices = {};
             me.event = {};
             me.keys = new Int8Array(255);
+            me.lights = [];
+
+            me.lights.push({
+                type:"directional",
+                direction: vec3.fromValues(1, 1, 1),
+                color: vec3.fromValues(1,1,1),
+                ambientIntensity : 0.2,
+                intensity: 0.8
+            });
+
+            me.lights.forEach(function(val){
+                if (val.type === "directional"){
+                    vec3.normalize(val.direction, val.direction);
+                }
+            });
+
+
             
             me.matrices.projection = mat4.create();
             me.matrices.view = mat4.create();
@@ -197,12 +199,8 @@ var brdf = function () {
         };
 
         me.drawAxisMesh = function(mesh){
-            me.activeProgram.uniform.uColor = [1,1,1];
             me.activeProgram.sampler.diffuse0 = mesh.material.textures.diffuse0;
         };
-
-        me.sponzaDraw = new sponzaDrawHandler();
-        me.sunDirection = vec3.fromValues(0.57735, 0.57735, 0.57735);
     };
 
     me.draw = function(){
@@ -236,7 +234,11 @@ var brdf = function () {
         me.matrices.viewProjection = me.camera.camera();
 
         me.activeProgram.use();
-        me.activeProgram.uniform.uLightDirection = me.sunDirection;
+        me.activeProgram.uniform.uLightDirection = me.lights[0].direction;
+        me.activeProgram.uniform.uLightColor = me.lights[0].color;
+        me.activeProgram.uniform.uLightIntensity = me.lights[0].intensity;
+        me.activeProgram.uniform.uAmbientIntensity = me.lights[0].ambientIntensity;
+
 
         var model = me.model.sponza;
         model.BindBuffers();

@@ -1,24 +1,24 @@
 "use strict"
 
+function LoadShaders(glslPath, bindings, oncomplete){
+    LoadShaderSource(glslPath, function(sources){
+        var programs = {};
+        for (var name in sources){
+            if(sources.hasOwnProperty(name)){
+                programs[name] = new ShaderProgram({
+                    vertex: sources[name].vertex,
+                    fragment: sources[name].fragment,
+                    binds: bindings
+                }, false); //Change to 'true' to allow mutable. 
+            }
+        }
+        oncomplete(programs);
+    });
+};
 
-/*
-
-    Any state F that can be reached by another final state X should be excluded. This  removes final states that are a part of (the ending) of
-    a string that contains a prefix string that contains another final state.
-
-    But how to prevent the remmoval of final states that are part of both unneeded strings and needed strings?
-
-    L = {123, 439, 65, 34165, 12365}
-    Min(L) = {123, 431, 65, 34165 }
-
-
- */
-
-
-
-function ShaderSource(filename, onload) {
-    if (typeof ShaderSource.regex === "undefined") {
-        ShaderSource.regex = /^(?=---(?!.*END)(?:.*START\s(\w+)\s)?).*\n((?:(?!---(?:$|.*END)).*\n)+)/gm;
+function LoadShaderSource(filename, onload) {
+    if (typeof LoadShaderSource.regex === "undefined") {
+        LoadShaderSource.regex = /^(?=---(?!.*END)(?:.*START\s(\w+)\s)?).*\n((?:(?!---(?:$|.*END)).*\n)+)/gm;
     }
 
     $.ajax(
@@ -30,9 +30,9 @@ function ShaderSource(filename, onload) {
                 var obj = {}
                 data = data.replace(/\r/g, '');
 
-                while ((a = ShaderSource.regex.exec(data)) != null && (b = ShaderSource.regex.exec(data)) != null) {
-                    if (a.index === ShaderSource.regex.lastIndex || b.index == ShaderSource.regex.lastIndex) {
-                        ShaderSource.regex.lastIndex++;
+                while ((a = LoadShaderSource.regex.exec(data)) != null && (b = LoadShaderSource.regex.exec(data)) != null) {
+                    if (a.index === LoadShaderSource.regex.lastIndex || b.index == LoadShaderSource.regex.lastIndex) {
+                        LoadShaderSource.regex.lastIndex++;
                     }
 
 
@@ -51,8 +51,14 @@ function ShaderSource(filename, onload) {
         });
 }
 
-function ShaderProgram(args) {
+function ShaderProgram(args, mutable) {
     this.valid = false;
+
+
+    if(typeof mutable === "undefined"){
+        mutable = false;
+    }
+
 
     var vertex = gl.createShader(gl.VERTEX_SHADER);
     gl.shaderSource(vertex, args.vertex);
@@ -79,11 +85,10 @@ function ShaderProgram(args) {
     gl.attachShader(this.program, vertex);
     gl.attachShader(this.program, fragment);
 
-    if (args.hasOwnProperty("binds")) {
-        for (var i in args.binds) {
-            var bind = args.binds[i];
-            gl.bindAttribLocation(this.program, bind[1], bind[0]);
-        }
+    if (args.hasOwnProperty("binds")){
+        args.binds.forEach(function(bind){
+            gl.bindAttribLocation(this.program, bind[1], bind[0])
+        }, this);
     }
 
     gl.linkProgram(this.program);
@@ -114,124 +119,154 @@ function ShaderProgram(args) {
 
         switch (uniform.type) {
             case gl.FLOAT_MAT4:
-                Object.defineProperty(this.uniform, uniform.name, function (a) {
-                    return {
-                        set: function (v) {
-                            gl.uniformMatrix4fv(a.location, false, v);
-                        },
-                        get: function () {
-                            return "mat4";
-                        }
-                    };
-                }(uniform));
+                Object.defineProperty(this.uniform, uniform.name, ShaderProgram.prototype._mat4(uniform.location));
                 break;
             case gl.FLOAT_MAT3:
-                Object.defineProperty(this.uniform, uniform.name, function (a) {
-                    return {
-                        set: function (v) {
-                            gl.uniformMatrix3fv(a.location, false, v);
-                        },
-                        get: function () {
-                            return "mat3";
-                        }
-                    };
-                }(uniform));
+                Object.defineProperty(this.uniform, uniform.name, ShaderProgram.prototype._mat3(uniform.location));
                 break;
             case gl.FLOAT_MAT2:
-                Object.defineProperty(this.uniform, uniform.name, function (a) {
-                    return {
-                        set: function (v) {
-                            gl.uniformMatrix2fv(a.location, false, v);
-                        },
-                        get: function () {
-                            return "mat2";
-                        }
-                    };
-                }(uniform));
+                Object.defineProperty(this.uniform, uniform.name, ShaderProgram.prototype._mat2(uniform.location));
                 break;
             case gl.FLOAT_VEC4:
-                Object.defineProperty(this.uniform, uniform.name, function (a) {
-                    return {
-                        set: function (v) {
-                            gl.uniform4fv(a.location, v);
-                        },
-                        get: function () {
-                            return "vec4";
-                        }
-                    };
-                }(uniform));
+                Object.defineProperty(this.uniform, uniform.name, ShaderProgram.prototype._vec4(uniform.location));
                 break;
             case gl.FLOAT_VEC3:
-                Object.defineProperty(this.uniform, uniform.name, function (a) {
-                    return {
-                        set: function (v) {
-                            gl.uniform3fv(a.location, v);
-                        },
-                        get: function () {
-                            return "vec3";
-                        }
-                    };
-                }(uniform));
+                Object.defineProperty(this.uniform, uniform.name, ShaderProgram.prototype._vec3(uniform.location));
                 break;
             case gl.FLOAT_VEC2:
-                Object.defineProperty(this.uniform, uniform.name, function (a) {
-                    return {
-                        set: function (v) {
-                            gl.uniform2fv(a.location, v);
-                        },
-                        get: function () {
-                            return "vec2";
-                        }
-                    };
-                }(uniform));
+                Object.defineProperty(this.uniform, uniform.name, ShaderProgram.prototype._vec2(uniform.location));
                 break;
             case gl.FLOAT:
-                Object.defineProperty(this.uniform, uniform.name, function (a) {
-                    return {
-                        set: function (v) {
-                            gl.uniform1f(a.location, v);
-                        },
-                        get: function () {
-                            return "float";
-                        }
-                    };
-                }(uniform));
+                Object.defineProperty(this.uniform, uniform.name, ShaderProgram.prototype._uniform1f(uniform.location));
                 break;
             case gl.INT:
-                Object.defineProperty(this.uniform, uniform.name, function (a) {
-                    return {
-                        set: function (v) {
-                            gl.uniform1i(a.location, v);
-                        },
-                        get: function () {
-                            return "int"
-                        }
-                    };
-                }(uniform));
+                Object.defineProperty(this.uniform, uniform.name, ShaderProgram.prototype._uniform1i(uniform.location));
                 break;
             case gl.SAMPLER_2D:
                 gl.uniform1i(uniform.location, cTeId);
-                Object.defineProperty(this.sampler, uniform.name, function (a) {
-                    return {
-                        set: function (v) {
-                            gl.activeTexture(gl.TEXTURE0 + a);
-                            gl.bindTexture(gl.TEXTURE_2D, v);
-                        },
-                        get: function () {
-                            return "sampler2D";
-                        }
-                    };
-                }(cTeId++));
+                Object.defineProperty(this.sampler, uniform.name, ShaderProgram.prototype._sampler2D(cTeId++));
                 break;
         }
     }
 
-    Object.freeze(this.uniform);
-    Object.freeze(this.sampler);
+    if(mutable === false){
+        Object.freeze(this.uniform);
+        Object.freeze(this.sampler);
+    }
 
     gl.useProgram(null);
 
     this.use = function () {
         gl.useProgram(this.program);
     }
-}
+};
+
+
+
+
+ShaderProgram.prototype._sampler2D = function(textureId){
+    return {
+        set: function(v){
+            gl.activeTexture(gl.TEXTURE0 + textureId);
+            gl.bindTexture(gl.TEXTURE_2D, v);
+        },
+        get: function(){
+            return "sampler2D";
+        }
+    };
+};
+
+
+ShaderProgram.prototype._uniform1f = function(location){
+    return {
+        set: function(v){
+            gl.uniform1f(location, v);
+        },
+        get: function(){
+            return "float";
+        }
+    };
+};
+
+ShaderProgram.prototype._uniform1i = function(location){
+    return {
+        set: function(v){
+            gl.uniform1i(location, v);
+        },
+        get: function(){
+            return "int";
+        }
+    };
+};
+
+
+ShaderProgram.prototype._vec2 = function(location){
+    return {
+        set: function(v){
+            gl.uniform2fv(location, v);
+        },
+        get: function(){
+            return "vec2";
+        }
+    };
+};
+
+ShaderProgram.prototype._vec3 = function(location){
+    return {
+        set: function(v){
+            gl.uniform3fv(location, v);
+        },
+        get: function(){
+            return "vec3";
+        }
+    };
+};
+
+ShaderProgram.prototype._vec4 = function(location){
+    return {
+        set: function(v){
+            gl.uniform4fv(location, v);
+        },
+        get: function(){
+            return "vec4";
+        }
+    };
+};
+
+ShaderProgram.prototype._mat2 = function(location){
+    return {
+        set: function(v){
+            gl.uniformMatrix2fv(location, false, v);
+        },
+        get: function(){
+            return "mat2";
+        }
+    };
+};
+
+ShaderProgram.prototype._mat3 = function(location){
+    return {
+        set: function(v){
+            gl.uniformMatrix3fv(location, false, v);
+        },
+        get: function(){
+            return "mat3";
+        }
+    };
+};
+
+ShaderProgram.prototype._mat4 = function(location){
+    return {
+        set: function(v){
+            gl.uniformMatrix4fv(location, false, v);
+        },
+        get: function(){
+            return "mat4";
+        }
+    };
+};
+
+
+ShaderProgram.prototype.use = function(){
+    gl.useProgram(this.program);
+};

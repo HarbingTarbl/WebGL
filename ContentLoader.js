@@ -12,14 +12,14 @@ ContentLoader.LoadModel = function(model){
 
 ContentLoader.LoadShader = function(bindings, shader){
 	return new Promise(function(resolve, reject){
-		ShaderSource(shader, function(s){
+		LoadShaderSource(shader, function(s){
 			var programs = {};
 			for (var name in s){
 				programs[name] = new ShaderProgram({
 					vertex: s[name].vertex,
 					fragment: s[name].fragment,
 					binds: bindings
-				});
+				}, false);
 			}
 			resolve(programs);
 		});
@@ -62,9 +62,9 @@ ContentLoader.Load = function(bindings, models, shaders, textures){
 				return Promise.resolve();
 			});
 		}).then(function(){
-			delete me.modelsPromises;
-			delete me.shadersPromises;
-			delete me.texturePromises;
+			me.modelsPromises = null;
+			me.shadersPromises = null;
+			me.texturePromises = null;
 			accept(me);
 		});
 	});
