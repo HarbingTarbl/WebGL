@@ -60,7 +60,8 @@ var brdf = function () {
             ];
 
         var shaders = [
-            "shaders.glsl"
+            "shaders.glsl",
+            "cytek-ssao.glsl"
             ];
 
         var init = function(){
