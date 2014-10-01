@@ -21,12 +21,14 @@
         width: 60%;
         height: 60%;
         margin: auto;
+        float left;
     }
 
     #options {
+        float: right;
         position: absolute;
         z-index: 1;
-        left: 1%;
+        right: 1%;
         top: 2%;
         display: inline-block;
         background-color: dimgray;
@@ -67,7 +69,27 @@
 </head>
 <body onload="startWGL(document.querySelector('canvas'))">
 <canvas id="canvas"></canvas>
+<!-- <div id="options">
+<input type="color" name="lightColor" onchange="var rgb = getRGBValue(this.value); brdf.lights[0][this.name][0] = rgb[0]; console.log(rgb);" />
+<input type="range" name="intensity" min="-1" max="1" />
+<input type="range" name="ambientIntensity" min="-1" max="1" />
+<input type="color" name="direction" />
+</div>
+ -->
 
+<script type="text/javascript">
+function getRGBValue(searchString) {
+    var ingredients = searchString.match(/\d{,3}/g);
+    for (var i in ingredients) {
+        if (parseInt(ingredients[i]) > 255) {
+            return false;
+        }
+    }
+
+    return ingredients;
+}
+</script>
+<script type="text/javascript" src="cytek-ssao.js"></script>
 <script type="text/javascript" src="gl-matrix.js"></script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="ShaderProgram.js"></script>

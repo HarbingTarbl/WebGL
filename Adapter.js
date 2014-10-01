@@ -12,8 +12,6 @@ var Adapter = function(out, count, offset, stride){
 			enumerable: true
 		});
 	}
-
-	Object.freeze(this);
 };
 
 

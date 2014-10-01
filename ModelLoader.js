@@ -32,7 +32,6 @@ function LoadModel(path, callback){
 	xhr.open("GET", path, true);
 	counter.wait();
 	xhr.responseType = "json";
-	console.log(xhr.responseType);
 	xhr.onload = function(e) {
 		model = xhr.response;
 		if(typeof(model) === "string") { //Silly Safari, json != string. 
@@ -40,7 +39,6 @@ function LoadModel(path, callback){
 		}
 		var dataReq = new XMLHttpRequest();
 		var dir = path.substr(0, path.lastIndexOf('/') + 1);
-		console.log(dir);
 		dataReq.open("GET", dir + model.data, true);
 		counter.wait();
 		dataReq.responseType = "arraybuffer";
@@ -123,13 +121,13 @@ function LoadModel(path, callback){
 						counter.signal();
 					};
 				})(material, textureName);
-				img.onerror = (function(material, name){
+				img.onerror = (function(img, material, name){
 					return function(){
-						material.textures[textureName] = LoadModel.blankTexture;
+						material.textures[name] = LoadModel.blankTexture;
 						counter.signal();
 						console.log("Missing texture ", img.src);
 					};
-				})(material, textureName);
+				})(img, material, textureName);
 				img.src = dir + material.textures[textureName];
 			}
 		}

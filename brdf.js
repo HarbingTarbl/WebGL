@@ -60,9 +60,9 @@ var brdf = function () {
             ];
 
         var shaders = [
-            "shaders.glsl",
-            "cytek-ssao.glsl"
+            "shaders.glsl"
             ];
+
 
         var init = function(){
         	var pointerLock = 'pointerLockElement' in document ||
@@ -89,6 +89,9 @@ var brdf = function () {
         		me.pointerIsLocked = true;
         	}
 
+
+            me.ssao = new crytekSSAO(me.settings.width, me.settings.height, 20, 2000);
+
             me.matrices = {};
             me.event = {};
             me.keys = new Int8Array(255);
@@ -98,8 +101,8 @@ var brdf = function () {
                 type:"directional",
                 direction: vec3.fromValues(1, 1, 1),
                 color: vec3.fromValues(1,1,1),
-                ambientIntensity : 0.2,
-                intensity: 0.8
+                ambientIntensity : 0.5,
+                intensity: 1.0,
             });
 
             me.lights.forEach(function(val){
@@ -119,6 +122,7 @@ var brdf = function () {
 
             me.camera = new Camera(75, me.canvas.width / me.canvas.height, 20, 2000);
             me.camera.offsetPosition(0,0,3);
+            me.ssao.viewMatrix = me.camera;
 
             me.event.mousedown  = function(e){
             	me.canvas.requestPointerLock();
@@ -170,8 +174,7 @@ var brdf = function () {
             document.addEventListener('pointerlockchange', pointerLock, false);
             document.addEventListener('webkitpointerlockchange', pointerLock, false);
             document.addEventListener('mozpointerlockchange', pointerLock, false);
-
-            return Promise.resolve();
+            return Promise.all([me.ssao.ready()]);
         };
 
         ContentLoader.Load(
@@ -189,6 +192,9 @@ var brdf = function () {
                 }
                 return Promise.resolve();
             }).then(init).then(me.draw).catch(function(a){
+                var err = a.stack;
+                console.log(err);
+
                 console.log("%cError during inital draw call\n" + a.fileName + " " +  a.lineNumber + " " + a, "color:red");
             });
 
@@ -200,6 +206,10 @@ var brdf = function () {
         };
 
         me.drawAxisMesh = function(mesh){
+            if(typeof mesh.material.textures.diffuse0 === "undefined") {
+                return;
+            }
+
             me.activeProgram.sampler.diffuse0 = mesh.material.textures.diffuse0;
         };
     };
@@ -209,7 +219,7 @@ var brdf = function () {
         gl.viewport(0, 0, brdf.settings.width, brdf.settings.height);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-        me.activeProgram = me.program.DLDO;
+        // me.activeProgram = me.program.DLDO;
 
         if(me.keys[87]){
         	vec3.scaleAndAdd(me.camera.position(), me.camera.position(), me.camera.forward(), 5.0);
@@ -230,20 +240,35 @@ var brdf = function () {
     		vec3.scaleAndAdd(me.camera.position(), me.camera.position(), me.camera.up(), 5.0);
     	}
 
-
     	me.camera.setNeedsUpdate();
-        me.matrices.viewProjection = me.camera.camera();
+        // me.matrices.viewProjection = me.camera.camera();
 
-        me.activeProgram.use();
-        me.activeProgram.uniform.uLightDirection = me.lights[0].direction;
-        me.activeProgram.uniform.uLightColor = me.lights[0].color;
-        me.activeProgram.uniform.uLightIntensity = me.lights[0].intensity;
-        me.activeProgram.uniform.uAmbientIntensity = me.lights[0].ambientIntensity;
+        // vec3.rotateY(me.lights[0].direction, me.lights[0].direction, [0,0,0], 0.01);
+
+        // me.activeProgram.use();
+        // me.activeProgram.uniform.uLightDirection = me.lights[0].direction;
+        // me.activeProgram.uniform.uLightColor = me.lights[0].color;
+        // me.activeProgram.uniform.uLightIntensity = me.lights[0].intensity;
+        // me.activeProgram.uniform.uAmbientIntensity = me.lights[0].ambientIntensity;
 
 
+        // var model = me.model.sponza;
+        // model.BindBuffers();
+        // model.Draw(me.drawAxisObject, me.drawAxisMesh);
+
+
+        var pass = brdf.ssao.gbufferPass;
         var model = me.model.sponza;
+
         model.BindBuffers();
-        model.Draw(me.drawAxisObject, me.drawAxisMesh);
+        pass.drawStart();
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+        pass.drawModel(model);
+
+
+
+
         window.requestAnimationFrame(me.draw);
     };
 

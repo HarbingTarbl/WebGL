@@ -2574,6 +2574,31 @@
             return out;
         };
 
+        mat3.multiply4 = function(out, a, b){
+            var a00 = a[0], a01 = a[1], a02 = a[2],
+                a10 = a[3], a11 = a[4], a12 = a[5],
+                a20 = a[6], a21 = a[7], a22 = a[8],
+
+                b00 = b[0], b01 = b[1], b02 = b[2],
+                b10 = b[4], b11 = b[5], b12 = b[6],
+                b20 = b[8], b21 = b[9], b22 = b[10];
+
+            out[0] = b00 * a00 + b01 * a10 + b02 * a20;
+            out[1] = b00 * a01 + b01 * a11 + b02 * a21;
+            out[2] = b00 * a02 + b01 * a12 + b02 * a22;
+
+            out[3] = b10 * a00 + b11 * a10 + b12 * a20;
+            out[4] = b10 * a01 + b11 * a11 + b12 * a21;
+            out[5] = b10 * a02 + b11 * a12 + b12 * a22;
+
+            out[6] = b20 * a00 + b21 * a10 + b22 * a20;
+            out[7] = b20 * a01 + b21 * a11 + b22 * a21;
+            out[8] = b20 * a02 + b21 * a12 + b22 * a22;
+            return out;
+        };
+
+        mat3.mul4 = mat3.multiply4;
+
         /**
          * Alias for {@link mat3.multiply}
          * @function
@@ -2635,6 +2660,46 @@
             out[6] = a20;
             out[7] = a21;
             out[8] = a22;
+            return out;
+        };
+
+        mat3.rotateX = function (out, a, rad) {
+            var s = Math.sin(rad),
+                c = Math.cos(rad),
+                a10 = a[3],
+                a11 = a[4],
+                a12 = a[5],
+                a20 = a[6],
+                a21 = a[7],
+                a22 = a[8];
+
+            // Perform axis-specific matrix multiplication
+            out[3] = a10 * c + a20 * s;
+            out[4] = a11 * c + a21 * s;
+            out[5] = a12 * c + a22 * s;
+            out[6] = a20 * c - a10 * s;
+            out[7] = a21 * c - a11 * s;
+            out[8] = a22 * c - a12 * s;
+            return out;
+        };
+
+        mat3.rotateY = function (out, a, rad) {
+            var s = Math.sin(rad),
+                c = Math.cos(rad),
+                a00 = a[0],
+                a01 = a[1],
+                a02 = a[2],
+                a20 = a[6],
+                a21 = a[7],
+                a22 = a[8];
+
+            // Perform axis-specific matrix multiplication
+            out[0] = a00 * c - a20 * s;
+            out[1] = a01 * c - a21 * s;
+            out[2] = a02 * c - a22 * s;
+            out[6] = a00 * s + a20 * c;
+            out[7] = a01 * s + a21 * c;
+            out[8] = a02 * s + a22 * c;
             return out;
         };
 
@@ -3148,6 +3213,44 @@
             out[15] = b0 * a03 + b1 * a13 + b2 * a23 + b3 * a33;
             return out;
         };
+
+        mat4.multiply3 = function(out, a, b){
+            var a00 = a[0], a01 = a[1], a02 = a[2], a03 = a[3],
+                a10 = a[4], a11 = a[5], a12 = a[6], a13 = a[7],
+                a20 = a[8], a21 = a[9], a22 = a[10], a23 = a[11],
+                a30 = a[12], a31 = a[13], a32 = a[14], a33 = a[15];
+
+            // Cache only the current line of the second matrix
+            var b0 = b[0], b1 = b[1], b2 = b[2];
+            out[0] = b0 * a00 + b1 * a10 + b2 * a20;
+            out[1] = b0 * a01 + b1 * a11 + b2 * a21;
+            out[2] = b0 * a02 + b1 * a12 + b2 * a22;
+            out[3] = b0 * a03 + b1 * a13 + b2 * a23;
+
+            b0 = b[3];
+            b1 = b[4];
+            b2 = b[5];
+            out[4] = b0 * a00 + b1 * a10 + b2 * a20;
+            out[5] = b0 * a01 + b1 * a11 + b2 * a21;
+            out[6] = b0 * a02 + b1 * a12 + b2 * a22;
+            out[7] = b0 * a03 + b1 * a13 + b2 * a23;
+
+            b0 = b[6];
+            b1 = b[7];
+            b2 = b[8];
+            out[8] = b0 * a00 + b1 * a10 + b2 * a20;
+            out[9] = b0 * a01 + b1 * a11 + b2 * a21;
+            out[10] = b0 * a02 + b1 * a12 + b2 * a22;
+            out[11] = b0 * a03 + b1 * a13 + b2 * a23;
+
+            out[12] = a30;
+            out[13] = a31;
+            out[14] = a32;
+            out[15] = a33;
+            return out;
+        };
+
+        mat4.mul3 = mat4.multiply3;
 
         /**
          * Alias for {@link mat4.multiply}

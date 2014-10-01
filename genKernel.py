@@ -28,4 +28,4 @@ for x in range(0, 16):
 	b *= scale
 	c *= scale
 
-	print("{0}, {1}, {2}".format(a,b,c), end=', ')
+	print("{0}, {1}, {2}".format(a,b,c), end=',\n')

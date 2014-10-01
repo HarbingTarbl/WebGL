@@ -1,8 +1,10 @@
+
+
 var Camera = function(fov, aspect, near, far){
 	this._pitch = 0;
 	this._yaw = 0;
-	this._orientationInverseMatrix = mat4.create();
-	this._orientationMatrix = mat4.create();
+	this._orientationInverseMatrix = mat3.create();
+	this._orientationMatrix = mat3.create();
 	this._perspectiveMatrix = mat4.create();
 	this._cameraMatrix = mat4.create();
 	this._position = vec3.create();
@@ -23,13 +25,13 @@ Camera.Up = vec3.fromValues(0, 1, 0);
 
 Camera.prototype.orientation = function(){
 	if(this._needsOrientationUpdate){
-		mat4.identity(this._orientationMatrix);
-		mat4.rotateX(this._orientationMatrix, this._orientationMatrix, this._yaw);
-		mat4.rotateY(this._orientationMatrix, this._orientationMatrix, this._pitch);
-		mat4.invert(this._orientationInverseMatrix, this._orientationMatrix);
-		vec3.transformMat4(this._forward, Camera.Forward, this._orientationInverseMatrix);
-		vec3.transformMat4(this._right, Camera.Right, this._orientationInverseMatrix);
-		vec3.transformMat4(this._up, Camera.Up, this._orientationInverseMatrix);
+		mat3.identity(this._orientationMatrix);
+		mat3.rotateX(this._orientationMatrix, this._orientationMatrix, this._yaw);
+		mat3.rotateY(this._orientationMatrix, this._orientationMatrix, this._pitch);
+		mat3.invert(this._orientationInverseMatrix, this._orientationMatrix);
+		vec3.transformMat3(this._forward, Camera.Forward, this._orientationInverseMatrix);
+		vec3.transformMat3(this._right, Camera.Right, this._orientationInverseMatrix);
+		vec3.transformMat3(this._up, Camera.Up, this._orientationInverseMatrix);
 		this._needsOrientationUpdate = false;
 		this._needsCameraUpdate = true;
 	}
@@ -41,7 +43,7 @@ Camera.prototype.camera = function(){
 	this.orientation();
 
 	if(this._needsCameraUpdate){
-		mat4.mul(this._cameraMatrix, this._perspectiveMatrix, this._orientationMatrix);
+		mat4.mul3(this._cameraMatrix, this._perspectiveMatrix, this._orientationMatrix);
 		vec3.negate(this._negPosition, this._position);
 		mat4.translate(this._cameraMatrix, this._cameraMatrix, this._negPosition);
 		this._needsCameraUpdate = false;
