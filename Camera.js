@@ -7,10 +7,12 @@ var Camera = function(fov, aspect, near, far){
 	this._orientationMatrix = mat3.create();
 	this._perspectiveMatrix = mat4.create();
 	this._cameraMatrix = mat4.create();
+	this._viewMatrix = mat4.create();
 	this._position = vec3.create();
 	this._negPosition = vec3.create();
 	this._needsOrientationUpdate = true;
 	this._needsCameraUpdate = true;
+	this._needsViewUpdate = true;
 
 	this._forward = vec3.create();
 	this._right = vec3.create();
@@ -39,13 +41,24 @@ Camera.prototype.orientation = function(){
 	return this._orientationMatrix;
 };
 
-Camera.prototype.camera = function(){
+Camera.prototype.view = function(){
 	this.orientation();
+	if(this._needsViewUpdate){
+		mat4.identity(this._viewMatrix);
+		mat4.mul3(this._viewMatrix, this._viewMatrix, this._orientationMatrix);
+		vec3.negate(this._negPosition, this._position);
+		mat4.translate(this._viewMatrix, this._viewMatrix, this._negPosition);
+		this._needsViewUpdate = false;
+	}
+
+	return this._viewMatrix;
+}
+
+Camera.prototype.camera = function(){
+	this.view();
 
 	if(this._needsCameraUpdate){
-		mat4.mul3(this._cameraMatrix, this._perspectiveMatrix, this._orientationMatrix);
-		vec3.negate(this._negPosition, this._position);
-		mat4.translate(this._cameraMatrix, this._cameraMatrix, this._negPosition);
+		mat4.mul(this._cameraMatrix, this._perspectiveMatrix, this._viewMatrix);
 		this._needsCameraUpdate = false;
 	}
 
@@ -72,6 +85,7 @@ Camera.prototype.setPosition = function(x, y, z){
 Camera.prototype.setNeedsUpdate = function(){
 	this._needsOrientationUpdate = true;
 	this._needsCameraUpdate = true;
+	this._needsViewUpdate = true;
 };
 
 Camera.prototype.position = function(){

@@ -136,8 +136,7 @@ function LoadModel(path, callback){
 			var mesh = model.meshes[meshIndex];
 			mesh.material = model.materials[mesh.material];
 			
-			mesh.Draw = function(perMesh){
-				perMesh(this);
+			mesh.Draw = function(){
 				gl.drawElements(gl.TRIANGLES, this.indexCount, model.elementType, this.indexOffset);
 			};
 		}

@@ -66,12 +66,13 @@ var crytekSSAO = function(width, height, near, far){
 	var me = this;
 
 	var promise = new Promise(function(accept, reject){
-		LoadShaders("cytek-ssao.glsl", [
+		LoadShaders("crytek-ssao.glsl", [
 				["vPosition", 0],
 				["vNormal", 1],
 				["vTangent", 2],
 				["vBitangent", 3],
-				["vTexture", 4]
+				["vTexture", 4],
+				["vViewRay", 1]
 			], function(shaders){
 				me.gbufferPass.program = shaders.GBuffer;
 				me.occlusionPass.program = shaders.SSAO;
@@ -84,6 +85,9 @@ var crytekSSAO = function(width, height, near, far){
 						gl.bindTexture(gl.TEXTURE_2D, me.occlusionPass.noiseTexture);
 						gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
 						gl.bindTexture(gl.TEXTURE_2D, null);
+						me.occlusionPass.program.use();
+						me.occlusionPass.program.sampler.sNoiseTexture = me.occlusionPass.noiseTexture;
+						gl.useProgram(null);
 						accept();
 					};
 					img.onerror = reject;
@@ -106,6 +110,7 @@ var crytekSSAO = function(width, height, near, far){
 					if(typeof mesh.material.textures.diffuse0 === "undefined") return;
 
 					this.program.sampler.diffuse0 = mesh.material.textures.diffuse0;
+					mesh.Draw();
 				};
 
 				pass.drawObject = function(obj){
@@ -119,7 +124,6 @@ var crytekSSAO = function(width, height, near, far){
 
 				pass.drawModel = function(model){
 					model.BindBuffers();
-					console.log(model);
 					var keys = Object.keys(model.objects);
 					keys.forEach(function(v){
 						this.drawObject(model.objects[v]);	
@@ -128,9 +132,11 @@ var crytekSSAO = function(width, height, near, far){
 
 				pass.drawStart = function(){
 					this.use();
-					mat3.fromMat4(me.viewInvT, me.viewMatrix);
+					me.viewMatrix = me.camera.view();
+					me.viewInvT = me.camera.orientation();
 					this.program.uniform.uPMatrix = me.projectionMatrix;
 				};
+
 
 				pass.program.use();
 				pass.program.uniform.uNear = near;
@@ -157,17 +163,20 @@ var crytekSSAO = function(width, height, near, far){
 
 
 				var pass = me.occlusionPass;
-				pass.program.uKernel = kernel;
-				pass._use = pass.use;
-				pass.use = function(){
-					this._use();
-					this.program.sampler.sRotations = this.noiseTexture;
-				};
+				pass.program.uniform.uKernel = kernel;
+				pass.program.uniform.uNoiseScale = new Float32Array([1.0 / 4.0, 1.0 / 4.0]);
+				pass.program.uniform.uKernelSize = 2.0;
+				pass.program.uniform.uScreenSize = new Float32Array([width, height]);
+				pass.program.sampler.sNormalDepthTex = me.gbufferPass.normalTexture;
 
 				gl.useProgram(null);
+				
+				pass._use = pass.use;
 
 				var k = mat4.create();
-				mat4.perspective(k, width / height, 75 * 3.14 / 180, 1.0, 100.0);
+				me.k = k;
+				mat4.perspective(k, 75 * 3.14159 / 180, width / height,  near, far);
+				console.log(k);
 				mat4.invert(k, k);
 
 
@@ -178,30 +187,42 @@ var crytekSSAO = function(width, height, near, far){
 					1, 1, 0, 1, 	0, 0, 0
 				]);
 
-				var viewRays = [
+				me.viewRays = [
 					new Adapter(data, 3, 4, 1),
 					new Adapter(data, 3, 11, 1),
 					new Adapter(data, 3, 18, 1),
 					new Adapter(data, 3, 25, 1),
-					vec4.fromValues(-1, 1, 1, 1),
-					vec4.fromValues(-1, -1, 1, 1),
-					vec4.fromValues(1, -1, 1, 1),
-					vec4.fromValues(1, 1, 1, 1)
 				];
 
-				vec4.set(viewRays[0], -1, 1, -1, 1);
-				vec4.set(viewRays[1], -1, -1, -1, 1);
-				vec4.set(viewRays[2], 1, -1, -1, 1);
-				vec4.set(viewRays[3], 1, 1, -1, 1);
+				var viewRays = me.viewRays;
+
+				vec4.set(viewRays[0], -1, 1, 1, 1);
+				vec4.set(viewRays[1], -1, -1, 1, 1);
+				vec4.set(viewRays[2], 1, -1, 1, 1);
+				vec4.set(viewRays[3], 1, 1, 1, 1);
 
 				var i = 0;
 				for(; i < 4; i++){
 					vec4.transformMat4(viewRays[i], viewRays[i], k);
-					vec4.transformMat4(viewRays[i + 4], viewRays[i + 4], k);
 					vec4.scale(viewRays[i], viewRays[i], 1.0 / viewRays[i][3]);
-					vec4.scale(viewRays[i + 4], viewRays[i + 4], 1.0 / viewRays[i + 4][3]);
-					vec4.sub(viewRays[i], viewRays[i + 4], viewRays[i]);
 				}
+
+
+				var viewRaysBuffer = gl.createBuffer();
+				gl.bindBuffer(gl.ARRAY_BUFFER, viewRaysBuffer);
+				gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
+				pass.use = function(){
+					this._use();
+					this.program.sampler.sRotations = this.noiseTexture;
+					gl.enableVertexAttribArray(0);
+					gl.enableVertexAttribArray(1);
+					gl.bindBuffer(gl.ARRAY_BUFFER, viewRaysBuffer);
+					gl.vertexAttribPointer(0, 4, gl.FLOAT, false, 4 * 7, 0);
+					gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 4 * 7, 4 * 4);
+				};
+
+				
+
 
 				//Any other setup
 				imgPromise.then(function(){

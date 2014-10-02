@@ -90,7 +90,7 @@ var brdf = function () {
         	}
 
 
-            me.ssao = new crytekSSAO(me.settings.width, me.settings.height, 20, 2000);
+
 
             me.matrices = {};
             me.event = {};
@@ -121,8 +121,12 @@ var brdf = function () {
             me.matrices.modelViewProjection = mat4.create();
 
             me.camera = new Camera(75, me.canvas.width / me.canvas.height, 20, 2000);
+            console.log("K");
+            console.log(me.camera._perspectiveMatrix);
+            me.ssao = new crytekSSAO(me.settings.width, me.settings.height, 20, 2000);
             me.camera.offsetPosition(0,0,3);
-            me.ssao.viewMatrix = me.camera;
+            me.ssao.camera = me.camera;
+            me.ssao.projectionMatrix = me.camera._perspectiveMatrix;
 
             me.event.mousedown  = function(e){
             	me.canvas.requestPointerLock();
