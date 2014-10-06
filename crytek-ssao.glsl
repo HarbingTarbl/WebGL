@@ -11,7 +11,9 @@ uniform mat4 uMVMatrix;
 uniform float uNear;
 uniform float uFar;
 
-varying mat3 fTbn;
+
+varying vec3 fPosition;
+varying vec3 fNormal;
 varying vec2 fTexture;
 varying float fLinearZ;
 
@@ -21,25 +23,31 @@ void main()
 	p.xyz = vPostiion;
 	p.w = 1.0;
 
+
+
 	p = uMVMatrix * p;
-	fLinearZ = clamp((-p.z - uNear) / (uFar - uNear), 0.0, 1.0);
+	fLinearZ = - p.z / uFar;
 	gl_Position = uPMatrix * p;
-
-	fTbn = mat3(vTangent, vBitangent, vNormal);
-	fTbn = uViewNormalMatrix * fTbn;
-
+	fNormal = uViewNormalMatrix * vNormal;
+	fPosition = uViewNormalMatrix * vPostiion;
 	fTexture = vTexture;
 }
 
 ---
 #extension GL_EXT_draw_buffers : require
+#extension GL_OES_standard_derivatives : require
 precision mediump float;
 
 uniform sampler2D diffuse0;
+uniform sampler2D height0;
+uniform float specularPower;
+uniform float shininess;
+uniform float uBumpScale;
 
-varying mat3 fTbn;
+varying vec3 fNormal;
 varying vec2 fTexture;
 varying float fLinearZ;
+varying vec3 fPosition;
 
 vec2 encodeNormals(vec3 normal)
 {
@@ -55,11 +63,28 @@ vec2 encodeDepth(float depth)
 
 void main()
 {
-	//gl_FragColor = texture2D(diffuse0, fTexture);
 	gl_FragData[0].rgb = texture2D(diffuse0, fTexture).rgb;
-	gl_FragData[1].rg = encodeNormals(fTbn[2]);
-	gl_FragData[1].ba = encodeDepth(fLinearZ);
-	//gl_FragColor = vec4(fLinearZ);
+	gl_FragData[0].a = specularPower;
+
+	vec3 normal;
+	if(uBumpScale > 0.1){
+		vec3 SigmaS = dFdx(fPosition);
+		vec3 SigmaT = dFdy(fPosition);
+		vec3 vN = normalize(fNormal);
+		vec3 vR1 = cross(SigmaT, vN);
+		vec3 vR2 = cross(vN, SigmaS);
+		float det = dot(SigmaS, vR1);
+		float height = texture2D(height0, fTexture).r * uBumpScale;
+		float Bs = dFdx(height);
+		float Bt = dFdy(height);
+		vec3 Surf = sign(det) * (Bs * vR1  + Bt * vR2);
+		normal = normalize(abs(det) * vN - Surf);
+	}
+	else {
+		normal = normalize(fNormal);
+	}
+	gl_FragData[1].rgb = normal * 0.5 + 0.5;
+	gl_FragData[1].a = shininess;
 }
 
 --- END ---
@@ -84,18 +109,6 @@ void main()
 }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
 ---
 precision mediump float;
 
@@ -104,132 +117,101 @@ varying vec2 fPosition;
 varying vec2 fTexture;
 varying vec3 fViewRay;
 
+uniform sampler2D sDiffuseTex;
 uniform sampler2D sNormalDepthTex;
 uniform sampler2D sNoiseTexture;
+uniform sampler2D sProjectedDepthTexture;
 
 #define KERNEL_SIZE 16
 
 uniform vec3 uKernel[KERNEL_SIZE];
 uniform float uKernelSize;
 uniform float uNoiseScale;
-uniform mat4 uInverseVPMatrix;
-uniform mat4 uVPMatrix;
 
+uniform mat4 uInversePMatrix;
+uniform mat4 uPMatrix;
 uniform float uFar;
-
 uniform vec2 uScreenSize;
-
-
-//This is a screenspace technique, WTF am I doing it in a forward renderer.
-//<-- Silly
 
 
 //Everything in WebGL is a HUGE pain in the ass.
 //Doing even simple things (storing depth in a non-FP format) is a GIGANTIC HASSLE
 
-vec3 decodeNormal(vec2 enc)
-{
-    vec2 fenc = enc*4.0-2.0;
-    float f = dot(fenc,fenc);
-    float g = sqrt(1.0-f/4.0);
-    vec3 n;
-    n.xy = fenc*g;
-    n.z = 1.0-f/2.0;
-    return n;
-}
-
-float decodeDepth(vec2 depth)
-{
-	return depth.x + depth.y / 255.0;
-}
-
-vec4 texure2DLerpNormalDepth(vec2 texcoord)
-{
-    // texel size, fractional position and centroid UV
-    vec2 tex = 1.0/uScreenSize;
-    vec2 f = fract(texcoord*uScreenSize+0.5);
-    vec2 uv = floor(texcoord*uScreenSize+0.5)/uScreenSize;
-
-    // lookup the 4 corners
-    vec4 lb = texture2D(sNormalDepthTex, uv);
-    lb = vec4(decodeNormal(lb.rg).xyz, decodeDepth(lb.ba));
-    vec4 lt = texture2D(sNormalDepthTex, uv+vec2(0.0, tex.y));
-    lt = vec4(decodeNormal(lt.rg), decodeDepth(lt.ba));
-    vec4 rb = texture2D(sNormalDepthTex, uv+vec2(tex.x, 0.0));
-    rb = vec4(decodeNormal(rb.rg), decodeDepth(rb.ba));
-    vec4 rt = texture2D(sNormalDepthTex, uv+vec2(tex.y, tex.y));
-    rt = vec4(decodeNormal(rt.rg), decodeDepth(rt.ba));
-
-    // interpolation in y
-    vec4 a = mix(lb, lt, f.y);
-    vec4 b = mix(rb, rt, f.y);
-
-    // interpolation in x
-    return mix(a, b, f.x);
-}
-
-float texture2DLerpDepth(vec2 texcoord)
-{
-	vec2 tex = 1.0/uScreenSize;
-    vec2 f = fract(texcoord*uScreenSize+0.5);
-    vec2 uv = floor(texcoord*uScreenSize+0.5)/uScreenSize;
-
-    // lookup the 4 corners
-    vec2 lb = texture2D(sNormalDepthTex, uv).ba;
-    lb.r = decodeDepth(lb);
-    vec2 lt = texture2D(sNormalDepthTex, uv+vec2(0.0, tex.y)).ba;
-    lt.r = decodeDepth(lt);
-    vec2 rb = texture2D(sNormalDepthTex, uv+vec2(tex.x, 0.0)).ba;
-    rb.r = decodeDepth(rb);
-    vec2 rt = texture2D(sNormalDepthTex, uv+vec2(tex.x, tex.y)).ba;
-    rt.r = decodeDepth(rt);
-
-    // interpolation in y
-    float a = mix(lb.r, lt.r, f.y);
-    float b = mix(rb.r, rt.r, f.y);
-
-    // interpolation in x
-    return mix(a, b, f.x);
-}
-
 
 void main()
 {
-	vec4 texND = texure2DLerpNormalDepth(fTexture);
+	vec4 texND = texture2D(sNormalDepthTex, fTexture);
 
-	vec3 normal = normalize(texND.xyz);
-	float depth = texND.w * uFar;
+	vec3 normal = normalize(texND.xyz * 2.0 - 1.0); //[0, 1] -> [-1, 1]
+	float depth = texture2D(sProjectedDepthTexture, fTexture).r * 2.0 - 1.0; //[0, 1] -> [-1, 1]
 
 	vec3 rotation = normalize(texture2D(sNoiseTexture, fTexture * uNoiseScale).rgb * 2.0 - 1.0);
+	rotation.z = 0.0;
 
-	vec3 tangent = normalize(rotationVec - normal * dot(rotationVec, normal));
-	vec3 bitangent = cross(tangent, normal);
+	vec3 tangent = normalize(rotation - normal * dot(rotation, normal));
+	vec3 bitangent = cross(normal, tangent);
 	mat3 tbn = mat3(tangent, bitangent, normal);
 
-
-	vec4 origin = vec4(fViewRay * depth, 1.0);
+	vec4 origin = vec4(fPosition, depth, 1.0);
+	origin = uInversePMatrix * origin;
+	origin.xyz /= origin.w;
 
 	float occlusion = 0.0;
+	vec4 sample;
 	for(int i = 0; i < KERNEL_SIZE; i++)
 	{
-		vec4 sample = vec4(tbn * uKernel[i], 1.0);
+		sample = vec4(tbn * uKernel[i], 1.0);
 		sample.xyz = sample.xyz * uKernelSize + origin.xyz;
 
+		vec4 offset = uPMatrix * sample;
+		offset.xyz /= offset.w;
+		offset.xyz = offset.xyz * 0.5 + 0.5; //[-1, 1] -> [0, 1]
 
-		vec4 offset = uVPMatrix * sample;
-		offset.xy /= offset.w;
-		offset.xy *= 0.5 + 0.5;
+		float offsetDepth = texture2D(sProjectedDepthTexture, offset.xy).r; //[0, 1]
 
-		float offsetDepth = texture2DLerpDepth(offset);
-		float range = (abs(depth - offsetDepth) < uKernelSize) ? 1.0 / float(KERNEL_SIZE) : 0.0;
-		occlusion += range * (offsetDepth <= sample.z ? 1.0 / float(KERNEL_SIZE) : 0.0);
+		float range = (abs(depth - offsetDepth) < uKernelSize) ? 1.0 : 0.0;
+		occlusion += range * (offsetDepth <= offset.z ? 1.0 : 0.0);
 	}
 
-	occlusion = 1.0 - occlusion;
+	occlusion = 1.0 - occlusion / float(KERNEL_SIZE);
+	//gl_FragColor = vec4(abs(fViewRay / 1048.0), 1.0);
+	//gl_FragColor = vec4(normalize(uKernel[0]).xyz * 0.5 + 0.5, 1.0);
 	gl_FragColor = vec4(occlusion);
 }
 
 
+--- END ---
+
+
+--- START Blur ---
+attribute vec4 vPosition;
+
+varying vec2 fTexture;
+
+void main()
+{
+	fTexture = vPosition.xy;
+	fTexture = fTexture * 0.5 + 0.5;
+	gl_Position = vPosition;
+}
+
+---
+precision mediump float;
+varying vec2 fTexture;
+
+uniform sampler2D sInputTexture;
+uniform vec2 uSampleDirection;
+
+/// 3x3 Kernel
+
+void main()
+{
+	float v1 = texture2D(sInputTexture, fTexture + uSampleDirection * 0.6667).r;
+	float v2 = texture2D(sInputTexture, fTexture - uSampleDirection * 0.6667).r;
+
+
+	gl_FragColor = vec4((v1 + v2) * 0.5);
+}
 --- END ---
 
 

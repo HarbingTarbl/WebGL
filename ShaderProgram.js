@@ -116,35 +116,40 @@ function ShaderProgram(args, mutable) {
     for (var i = 0; i < nuniforms; i++) {
         var uniform = gl.getActiveUniform(this.program, i);
         uniform.location = gl.getUniformLocation(this.program, uniform.name);
+        var realName = uniform.name;
+        if(uniform.size != 1){
+            realName = uniform.name.substr(0, uniform.name.indexOf("["));
+        }
 
         switch (uniform.type) {
             case gl.FLOAT_MAT4:
-                Object.defineProperty(this.uniform, uniform.name, ShaderProgram.prototype._mat4(uniform.location));
+                console.log(realName);
+                Object.defineProperty(this.uniform, realName, ShaderProgram.prototype._mat4(uniform.location));
                 break;
             case gl.FLOAT_MAT3:
-                Object.defineProperty(this.uniform, uniform.name, ShaderProgram.prototype._mat3(uniform.location));
+                Object.defineProperty(this.uniform, realName, ShaderProgram.prototype._mat3(uniform.location));
                 break;
             case gl.FLOAT_MAT2:
-                Object.defineProperty(this.uniform, uniform.name, ShaderProgram.prototype._mat2(uniform.location));
+                Object.defineProperty(this.uniform, realName, ShaderProgram.prototype._mat2(uniform.location));
                 break;
             case gl.FLOAT_VEC4:
-                Object.defineProperty(this.uniform, uniform.name, ShaderProgram.prototype._vec4(uniform.location));
+                Object.defineProperty(this.uniform, realName, ShaderProgram.prototype._vec4(uniform.location));
                 break;
             case gl.FLOAT_VEC3:
-                Object.defineProperty(this.uniform, uniform.name, ShaderProgram.prototype._vec3(uniform.location));
+                Object.defineProperty(this.uniform, realName, ShaderProgram.prototype._vec3(uniform.location));
                 break;
             case gl.FLOAT_VEC2:
-                Object.defineProperty(this.uniform, uniform.name, ShaderProgram.prototype._vec2(uniform.location));
+                Object.defineProperty(this.uniform, realName, ShaderProgram.prototype._vec2(uniform.location));
                 break;
             case gl.FLOAT:
-                Object.defineProperty(this.uniform, uniform.name, ShaderProgram.prototype._uniform1f(uniform.location));
+                Object.defineProperty(this.uniform, realName, ShaderProgram.prototype._uniform1f(uniform.location));
                 break;
             case gl.INT:
-                Object.defineProperty(this.uniform, uniform.name, ShaderProgram.prototype._uniform1i(uniform.location));
+                Object.defineProperty(this.uniform, realName, ShaderProgram.prototype._uniform1i(uniform.location));
                 break;
             case gl.SAMPLER_2D:
                 gl.uniform1i(uniform.location, cTeId);
-                Object.defineProperty(this.sampler, uniform.name, ShaderProgram.prototype._sampler2D(cTeId++));
+                Object.defineProperty(this.sampler, realName, ShaderProgram.prototype._sampler2D(cTeId++));
                 break;
         }
     }

@@ -34,12 +34,13 @@ class vertex:
 		self.z += value
 
 size = 4
-vertices = [vertex(random.uniform(-1, 1), random.uniform(-1, 1), 0) for x in range(0, size * size)]
+vertices = [vertex(random.uniform(-1, 1), random.uniform(-1, 1), -1) for x in range(0, size * size)]
 for vert in vertices:
 	vert.normalize()
 	vert.mul(0.5)
 	vert.add(0.5)
 	vert.mul(255)
+	vert.z = 0;
 
 pixels = [(v.x, v.y, v.z) for v in vertices]
 p = []

@@ -1,5 +1,3 @@
-"u strict";
-
 var crytekSSAO = function(width, height, near, far){
 	this.width = width;
 	this.height = height;
@@ -16,86 +14,45 @@ var crytekSSAO = function(width, height, near, far){
 	pass.framebuffer = gl.createFramebuffer();
 	pass.diffuseTexture = gl.createTexture();
 	pass.normalTexture = gl.createTexture(); ///RGB (Normal) A (Depth)
-	pass.projectedDepthTexture = gl.createTexture();
 
 	gl.bindFramebuffer(gl.FRAMEBUFFER, pass.framebuffer);
 	gl.bindTexture(gl.TEXTURE_2D, pass.diffuseTexture);
 	gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
 	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
 	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-	gl.generateMipmap(gl.TEXTURE_2D);
 	gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, pass.diffuseTexture, 0);
 
 	gl.bindTexture(gl.TEXTURE_2D, pass.normalTexture);
-	gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.FLOAT, null);
+	gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
 	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
 	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-	gl.generateMipmap(gl.TEXTURE_2D);
 	gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0 + 1, gl.TEXTURE_2D, pass.normalTexture, 0);
-
-	gl.bindTexture(gl.TEXTURE_2D, pass.projectedDepthTexture);
-	gl.texImage2D(gl.TEXTURE_2D, 0, gl.DEPTH_COMPONENT, width, height, 0, gl.DEPTH_COMPONENT, gl.UNSIGNED_SHORT, null);
-	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-	gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, pass.projectedDepthTexture, 0);
-
-	gl.ext.draw_buffers.drawBuffersWEBGL([gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT0 + 1]);
-
-	var status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
-	if(status != gl.FRAMEBUFFER_COMPLETE){
-		alert("Incomplete Framebuffer for gbufferPass");
-	}
 
 	this.occlusionPass = {};
 	pass = this.occlusionPass;
 	pass.framebuffer = gl.createFramebuffer();
 	pass.occlusionTexture = gl.createTexture();
-	pass.texelSize = vec2.fromValues(1.0 / width, 1.0 / height);
 
 	gl.bindFramebuffer(gl.FRAMEBUFFER, pass.framebuffer);
 	gl.bindTexture(gl.TEXTURE_2D, pass.occlusionTexture);
 	gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
 	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
 	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 	gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, pass.occlusionTexture, 0);
 
-	var status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
-	if(status != gl.FRAMEBUFFER_COMPLETE){
-		alert("Incomplete Framebuffer for gbufferPass");
-	}
-
-
 	this.blurPass = {};
-	this.blurPass.pingFramebuffer = gl.createFramebuffer();
-	this.blurPass.pongFramebuffer = gl.createFramebuffer();
+	this.blurPass.framebuffer = gl.createFramebuffer();
 	this.blurPass.pingTexture = gl.createTexture();
 	this.blurPass.pongTexture = gl.createTexture();
-	this.blurPass.texelSize = vec2.fromValues(1.0 / width, 1.0 / height);
 	pass = this.blurPass;
 
-	var status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
-	if(status != gl.FRAMEBUFFER_COMPLETE){
-		alert("Incomplete Framebuffer for gbufferPass");
-	}
-
-	gl.bindFramebuffer(gl.FRAMEBUFFER, pass.pingFramebuffer);
+	gl.bindFramebuffer(gl.FRAMEBUFFER, pass.framebuffer);
 	gl.bindTexture(gl.TEXTURE_2D, pass.pingTexture);
 	gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
 	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
 	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
 	gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, pass.pingTexture, 0);
 
-
-
-	gl.bindFramebuffer(gl.FRAMEBUFFER, pass.pongFramebuffer);
 	gl.bindTexture(gl.TEXTURE_2D, pass.pongTexture);
 	gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
 	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
@@ -109,13 +66,12 @@ var crytekSSAO = function(width, height, near, far){
 	var me = this;
 
 	var promise = new Promise(function(accept, reject){
-		LoadShaders("crytek-ssao.glsl", [
+		LoadShaders("cytek-ssao.glsl", [
 				["vPosition", 0],
 				["vNormal", 1],
 				["vTangent", 2],
 				["vBitangent", 3],
-				["vTexture", 4],
-				["vViewRay", 1]
+				["vTexture", 4]
 			], function(shaders){
 				me.gbufferPass.program = shaders.GBuffer;
 				me.occlusionPass.program = shaders.SSAO;
@@ -126,11 +82,7 @@ var crytekSSAO = function(width, height, near, far){
 					var img = new Image();
 					img.onload = function(){
 						gl.bindTexture(gl.TEXTURE_2D, me.occlusionPass.noiseTexture);
-						gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, img);
-						gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-						gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-						gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
-						gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+						gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
 						gl.bindTexture(gl.TEXTURE_2D, null);
 						accept();
 					};
@@ -142,8 +94,6 @@ var crytekSSAO = function(width, height, near, far){
 					gl.bindFramebuffer(gl.FRAMEBUFFER, this.framebuffer);
 					gl.viewport(0, 0, width, height);
 					this.program.use();
-					gl.clearColor(1,1,1,1);
-					gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 				};
 
 				me.gbufferPass.use = f;
@@ -156,8 +106,6 @@ var crytekSSAO = function(width, height, near, far){
 					if(typeof mesh.material.textures.diffuse0 === "undefined") return;
 
 					this.program.sampler.diffuse0 = mesh.material.textures.diffuse0;
-					this.program.sampler.height0 = mesh.material.textures.height0;
-					mesh.Draw();
 				};
 
 				pass.drawObject = function(obj){
@@ -171,6 +119,7 @@ var crytekSSAO = function(width, height, near, far){
 
 				pass.drawModel = function(model){
 					model.BindBuffers();
+					console.log(model);
 					var keys = Object.keys(model.objects);
 					keys.forEach(function(v){
 						this.drawObject(model.objects[v]);	
@@ -179,17 +128,15 @@ var crytekSSAO = function(width, height, near, far){
 
 				pass.drawStart = function(){
 					this.use();
-					me.viewMatrix = me.camera.view();
-					me.viewInvT = me.camera.orientation();
+					mat3.fromMat4(me.viewInvT, me.viewMatrix);
 					this.program.uniform.uPMatrix = me.projectionMatrix;
 				};
 
-
 				pass.program.use();
+				pass.program.uniform.uNear = near;
 				pass.program.uniform.uFar = far;
-				pass.program.uniform.uBumpScale = 2.0;
 
-				
+				me.occlusionPass.program.use();
 				var kernel = new Float32Array([
 					-0.01498649266635391, 0.02055768025923563, 0.09670980725821117, 
 					-0.033790133124342925, -0.04959070811320776, 0.07999367832691415, 
@@ -210,112 +157,52 @@ var crytekSSAO = function(width, height, near, far){
 
 
 				var pass = me.occlusionPass;
-
-				pass.program.use();
-				pass.program.uniform.uKernel = kernel;
-				pass.program.uniform.uNoiseScale = width / 4.0;
-				pass.program.uniform.uKernelSize = 2.0;
-				pass.program.uniform.uScreenSize = new Float32Array([width, height]);
-				pass.program.uniform.uFar = far;
-				
+				pass.program.uKernel = kernel;
 				pass._use = pass.use;
+				pass.use = function(){
+					this._use();
+					this.program.sampler.sRotations = this.noiseTexture;
+				};
+
+				gl.useProgram(null);
 
 				var k = mat4.create();
-				me.k = k;
-				mat4.perspective(k, 75 * 3.14159 / 180, width / height,  near, far);
-				pass.program.uniform.uPMatrix = k;
+				mat4.perspective(k, width / height, 75 * 3.14 / 180, 1.0, 100.0);
 				mat4.invert(k, k);
-				pass.program.uniform.uInversePMatrix = k;
 
 
 				var data = new Float32Array([
 					-1, 1, 0, 1,	0, 0, 0,
-					1, 1, 0, 1,		0, 0, 0,
-					-1, -1, 0, 1, 	0, 0, 0,
-					1, -1, 0, 1, 	0, 0, 0
+					-1, -1, 0, 1,	0, 0, 0,
+					1, -1, 0, 1, 	0, 0, 0,
+					1, 1, 0, 1, 	0, 0, 0
 				]);
 
-				me.viewRays = [
+				var viewRays = [
 					new Adapter(data, 3, 4, 1),
 					new Adapter(data, 3, 11, 1),
 					new Adapter(data, 3, 18, 1),
 					new Adapter(data, 3, 25, 1),
+					vec4.fromValues(-1, 1, 1, 1),
+					vec4.fromValues(-1, -1, 1, 1),
+					vec4.fromValues(1, -1, 1, 1),
+					vec4.fromValues(1, 1, 1, 1)
 				];
 
-				var viewRays = me.viewRays;
-
-				vec4.set(viewRays[0], -1, 1, 1, 1);
-				vec4.set(viewRays[1], 1, 1, 1, 1);
-				vec4.set(viewRays[2], -1, -1, 1, 1);
-				vec4.set(viewRays[3], 1, -1, 1, 1);
+				vec4.set(viewRays[0], -1, 1, -1, 1);
+				vec4.set(viewRays[1], -1, -1, -1, 1);
+				vec4.set(viewRays[2], 1, -1, -1, 1);
+				vec4.set(viewRays[3], 1, 1, -1, 1);
 
 				var i = 0;
 				for(; i < 4; i++){
 					vec4.transformMat4(viewRays[i], viewRays[i], k);
+					vec4.transformMat4(viewRays[i + 4], viewRays[i + 4], k);
 					vec4.scale(viewRays[i], viewRays[i], 1.0 / viewRays[i][3]);
+					vec4.scale(viewRays[i + 4], viewRays[i + 4], 1.0 / viewRays[i + 4][3]);
+					vec4.sub(viewRays[i], viewRays[i + 4], viewRays[i]);
 				}
 
-
-				var viewRaysBuffer = gl.createBuffer();
-				gl.bindBuffer(gl.ARRAY_BUFFER, viewRaysBuffer);
-				gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
-				pass.use = function(){
-					this._use();
-					gl.enableVertexAttribArray(0);
-					gl.enableVertexAttribArray(1);
-					gl.bindBuffer(gl.ARRAY_BUFFER, viewRaysBuffer);
-					gl.vertexAttribPointer(0, 4, gl.FLOAT, false, 4 * 7, 0);
-					gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 4 * 7, 4 * 4);
-					this.program.sampler.sNormalDepthTex = me.gbufferPass.normalTexture;
-					this.program.sampler.sDiffuseTex = me.gbufferPass.diffuseTexture;
-					this.program.sampler.sProjectedDepthTexture = me.gbufferPass.projectedDepthTexture;
-					this.program.sampler.sNoiseTexture = this.noiseTexture;
-				};
-
-				pass.apply = function(){
-					this.use();
-					gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-				}
-
-				pass = me.blurPass;
-
-				pass.use = function(){
-					this.program.use();
-					gl.bindBuffer(gl.ARRAY_BUFFER, viewRaysBuffer);
-					gl.vertexAttribPointer(0, 4, gl.FLOAT, false, 4 * 7, 0);
-
-				};
-
-				pass.apply = function(passes){
-					this.use();
-
-	
-					while(passes--){
-						gl.bindFramebuffer(gl.FRAMEBUFFER, this.pingFramebuffer);
-						this.program.sampler.sInputTexture = me.occlusionPass.occlusionTexture;
-						vec2.set(this.apply.sampleDir, me.occlusionPass.texelSize[0], 0.0);
-						this.program.uniform.uSampleDirection = this.apply.sampleDir;
-						gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-						
-						if(passes === 0){
-							gl.bindFramebuffer(gl.FRAMEBUFFER, null); //DEBUG
-						} else {
-							gl.bindFramebuffer(gl.FRAMEBUFFER, me.occlusionPass.framebuffer);	
-						}
-						this.program.sampler.sInputTexture = this.pingTexture;
-						vec2.set(this.apply.sampleDir, 0.0, this.texelSize[1])
-						this.program.uniform.uSampleDirection = this.apply.sampleDir;
-						gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-					}
-
-					return this.pongTexture;
-				};
-
-				pass.apply.sampleDir = vec2.create();
-
-				
-
-				gl.useProgram(null);
 				//Any other setup
 				imgPromise.then(function(){
 					accept();

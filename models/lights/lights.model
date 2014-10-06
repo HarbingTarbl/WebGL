@@ -1,0 +1,150 @@
+{
+    "attributes": {
+        "normal": {
+            "index": 1,
+            "offset": 12,
+            "size": 3
+        },
+        "position": {
+            "index": 0,
+            "offset": 0,
+            "size": 3
+        }
+    },
+    "data": "lights.modeldata",
+    "indexCount": 462,
+    "indexOffset": 9408,
+    "indexSize": 2,
+    "materials": {
+        "DefaultMaterial": {
+            "ambientColor": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "bumpScale": 0.0,
+            "diffuseColor": [
+                0.60000002384185791,
+                0.60000002384185791,
+                0.60000002384185791
+            ],
+            "emissiveColor": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "gloss": 0.0,
+            "ior": 1.0,
+            "name": "DefaultMaterial",
+            "reflectiveColor": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "shadingModel": "unknown",
+            "shininess": 0.0,
+            "shininessStrength": 0.0,
+            "specularColor": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "textures": {}
+        }
+    },
+    "meshes": [
+        {
+            "indexCount": 36,
+            "indexOffset": 0,
+            "material": "DefaultMaterial",
+            "name": ""
+        },
+        {
+            "indexCount": 186,
+            "indexOffset": 72,
+            "material": "DefaultMaterial",
+            "name": ""
+        },
+        {
+            "indexCount": 240,
+            "indexOffset": 444,
+            "material": "DefaultMaterial",
+            "name": ""
+        }
+    ],
+    "name": "lights",
+    "objects": {
+        "Cone": {
+            "meshes": [
+                1
+            ],
+            "transform": [
+                1.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                1.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                1.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                1.0
+            ]
+        },
+        "Cube": {
+            "meshes": [
+                0
+            ],
+            "transform": [
+                1.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                1.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                1.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                1.0
+            ]
+        },
+        "Icosphere": {
+            "meshes": [
+                2
+            ],
+            "transform": [
+                1.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                1.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                1.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                1.0
+            ]
+        }
+    },
+    "vertexCount": 392,
+    "vertexOffset": 0,
+    "vertexSize": 24
+}

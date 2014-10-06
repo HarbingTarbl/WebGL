@@ -48,10 +48,11 @@ var brdf = function () {
 
 
         var scale = window.devicePixelRatio | 1;
-        canvas.width = window.screen.width * scale * 0.5;
-        canvas.height = window.screen.height * scale * 0.5;
+        canvas.width = 1024;
+        canvas.height = 512;
 
-        this.canvas.onresize = this.onresize;
+        console.log(canvas.height);
+
         this.settings.width = canvas.width;
         this.settings.height = canvas.height;
 
@@ -215,6 +216,7 @@ var brdf = function () {
             }
 
             me.activeProgram.sampler.diffuse0 = mesh.material.textures.diffuse0;
+            me.activeProgram.sampler.height0 = mesh.material.textures.height0;
         };
     };
 
@@ -264,12 +266,16 @@ var brdf = function () {
         var pass = brdf.ssao.gbufferPass;
         var model = me.model.sponza;
 
-        model.BindBuffers();
         pass.drawStart();
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-
         pass.drawModel(model);
 
+
+
+        pass = brdf.ssao.occlusionPass;
+        pass.apply();
+
+        pass = brdf.ssao.blurPass;
+        pass.apply(3);
 
 
 
