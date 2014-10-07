@@ -68,8 +68,10 @@ uniform vec3 uSpotLightColor[MAX_SPOT_LIGHTS];
 uniform vec2 uSpotLightAttenuation[MAX_SPOT_LIGHTS];
 
 #define MAX_DIRECTIONAL_LIGHTS 1
-uniform vec3 uDirectionalLightDirections[MAX_DIRECTIONAL_LIGHTS];
-uniform vec4 uDirectionalLightColors[MAX_DIRECTIONAL_LIGHTS];
+uniform vec3 uDirectionalLightDirection[MAX_DIRECTIONAL_LIGHTS];
+uniform vec4 uDirectionalLightColor[MAX_DIRECTIONAL_LIGHTS];
+
+uniform vec4 uAmbientColorPower;
 
 varying vec3 fNormal;
 varying vec2 fTexture;
@@ -152,6 +154,8 @@ void main()
 		
 
 		lambertColor += NdL * uPointLightColor[i];
+		affectingLight += NdL;
+
 		if(NdL > 0.001)
 		{
 			vec3 H = normalize(L - position);
@@ -185,6 +189,7 @@ void main()
 
 		float NdL = max(dot(normal, L), 0.0) * atten;
 		lambertColor += NdL * uSpotLightColor[i];
+		affectingLight += NdL;
 		
 		if(NdL > 0.001){
 			vec3 H = normalize(L - position);
@@ -196,18 +201,32 @@ void main()
 
 	for(int i = 0; i < MAX_DIRECTIONAL_LIGHTS; i++)
 	{
+		float power = uDirectionalLightColor[i].a;
+		if(power <= 0.001){
+			continue;
+		}
 
+
+		float NdL = max(dot(normal, uDirectionalLightDirection[i]), 0.0) * power;
+		lambertColor += NdL * uDirectionalLightColor.rgb;
+		if(NdL > 0.001){
+			vec3 H = normalize(uDirectionalLightDirection[i] - position);
+			float NdH = max(dot(normal, H), 0.0);
+			specularColor += power * pow(NdH, shininess) * uDirectionalLightColor.rgb;
+		}
 	}
 
 	float specularCoef = texture2D(specular0, fTexture).r;
 
+	affectingLight = 1.0 - affectingLight;
 	affectingLight = min(affectingLight, 1.0);	
-	vec4 affectingColor = min(vec4((lambertPower * lambertColor + specularCoef * specularPower * specularColor) * albedo, affectingLight), vec4(1.0));
+	vec4 affectingColor = min(vec4(
+		(lambertPower * lambertColor + 
+		specularCoef * specularPower * specularColor + uAmbientColorPower.rgb * uAmbientColorPower.a) * albedo, affectingLight), vec4(1.0));
 	affectingColor.xyz = pow(affectingColor.xyz, vec3(2.2));
 	affectingColor.w = 1.0 - affectingColor.w;
 
 	gl_FragData[0] = affectingColor;
-	//gl_FragData[0].xyz = albedo;
 	gl_FragData[1].rgb = normal * 0.5 + 0.5;
 	gl_FragData[1].a = shininess;
 }
