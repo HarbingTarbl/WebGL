@@ -16,6 +16,7 @@ varying vec3 fPosition;
 varying vec3 fNormal;
 varying vec2 fTexture;
 varying float fLinearZ;
+varying vec3 fViewPosition;
 
 void main()
 {
@@ -23,11 +24,12 @@ void main()
 	p.xyz = vPostiion;
 	p.w = 1.0;
 
-
-
 	p = uMVMatrix * p;
+	fViewPosition = p.xyz;
+
 	fLinearZ = - p.z / uFar;
 	gl_Position = uPMatrix * p;
+
 	fNormal = uViewNormalMatrix * vNormal;
 	fPosition = uViewNormalMatrix * vPostiion;
 	fTexture = vTexture;
@@ -40,14 +42,40 @@ precision mediump float;
 
 uniform sampler2D diffuse0;
 uniform sampler2D height0;
+uniform sampler2D specular0;
+
 uniform float specularPower;
+uniform float lambertPower;
 uniform float shininess;
 uniform float uBumpScale;
+
+//Don't got time for a fullblown deferred shading!
+//GET SOME HYBRID RENDERAN WOO WOO
+
+
+#define MAX_POINT_LIGHTS 5
+uniform vec3 uPointLightPosition[MAX_POINT_LIGHTS];
+uniform vec3 uPointLightColor[MAX_POINT_LIGHTS];
+uniform float uPointLightRadius[MAX_POINT_LIGHTS];
+uniform float uPointLightCutoff[MAX_POINT_LIGHTS];
+uniform float uPointLightPower[MAX_POINT_LIGHTS];
+
+#define MAX_SPOT_LIGHTS 1
+uniform vec3 uSpotLightPosition[MAX_SPOT_LIGHTS];
+uniform vec3 uSpotLightDirection[MAX_SPOT_LIGHTS];
+uniform vec3 uSpotLightAngle[MAX_SPOT_LIGHTS];
+uniform vec3 uSpotLightColor[MAX_SPOT_LIGHTS];
+uniform vec2 uSpotLightAttenuation[MAX_SPOT_LIGHTS];
+
+#define MAX_DIRECTIONAL_LIGHTS 1
+uniform vec3 uDirectionalLightDirections[MAX_DIRECTIONAL_LIGHTS];
+uniform vec4 uDirectionalLightColors[MAX_DIRECTIONAL_LIGHTS];
 
 varying vec3 fNormal;
 varying vec2 fTexture;
 varying float fLinearZ;
 varying vec3 fPosition;
+varying vec3 fViewPosition;
 
 vec2 encodeNormals(vec3 normal)
 {
@@ -61,13 +89,24 @@ vec2 encodeDepth(float depth)
 }
 
 
+float attenuate(vec3 lpos, float radius, float cutoff)
+{
+	vec3 L = lpos - fViewPosition;
+	float dist = length(L);
+	float d = max(dist - radius, 0.0);
+	L /= dist;
+
+	float denom = d / radius + 1.0;
+	float atten = 1.0 / (denom * denom);
+	atten = (atten - cutoff) / (1.0 - cutoff);
+	return max(atten, 0.0);
+}
+
+
 void main()
 {
-	gl_FragData[0].rgb = texture2D(diffuse0, fTexture).rgb;
-	gl_FragData[0].a = specularPower;
-
 	vec3 normal;
-	if(uBumpScale > 0.1){
+	if(uBumpScale > 0.2){
 		vec3 SigmaS = dFdx(fPosition);
 		vec3 SigmaT = dFdy(fPosition);
 		vec3 vN = normalize(fNormal);
@@ -83,6 +122,92 @@ void main()
 	else {
 		normal = normalize(fNormal);
 	}
+
+	vec3 position = normalize(fViewPosition);
+	vec3 albedo = texture2D(diffuse0, fTexture).rgb;
+	albedo = pow(albedo, vec3(1.0 / 2.2)); //Gamma Correction!
+
+	vec3 lambertColor = vec3(0.0);
+	vec3 specularColor = vec3(0.0);
+	float affectingLight = 0.0;
+
+
+	for(int i = 0; i < MAX_POINT_LIGHTS; i++)
+	{
+		if(uPointLightPower[i] <= 0.001){
+			continue;
+		}
+
+		vec3 L = uPointLightPosition[i] - fViewPosition;
+		float dist = length(L);
+		float d = max(dist - uPointLightRadius[i], 0.0);
+		L /= dist;
+
+		float denom = d / uPointLightRadius[i] + 1.0;
+		float atten = 1.0 / (denom * denom);
+		atten = (atten - uPointLightCutoff[i]) / (1.0 - uPointLightCutoff[i]);
+		atten = max(atten, 0.0) * uPointLightPower[i];
+
+		float NdL = max(dot(normal, L), 0.0) * atten;
+		
+
+		lambertColor += NdL * uPointLightColor[i];
+		if(NdL > 0.001)
+		{
+			vec3 H = normalize(L - position);
+			float NdH = max(dot(normal, H), 0.0);
+			specularColor += atten * pow(NdH, shininess) * uPointLightColor[i];
+		}
+	}
+
+	for(int i = 0; i < MAX_SPOT_LIGHTS; i++)
+	{
+		float power = uSpotLightAngle[i].z;
+		if(power <= 0.001){
+			continue;
+		}
+
+		vec3 L = uSpotLightPosition[i] - fViewPosition;
+		float dist = length(L);
+		float d = max(dist - uSpotLightAttenuation[i].x, 0.0);
+		L /= dist;
+
+		float denom = d / uSpotLightAttenuation[i].x + 1.0;
+		float atten = 1.0 / (denom * denom);
+		atten = (atten - uSpotLightAttenuation[i].y) / (1.0 - uSpotLightAttenuation[i].y);
+		atten = max(atten, 0.0) * power;
+
+
+		float angle = dot(-L, uSpotLightDirection[i]);
+		float cone = smoothstep(uSpotLightAngle[i].x, uSpotLightAngle[i].y, angle);
+
+		atten *= cone;
+
+		float NdL = max(dot(normal, L), 0.0) * atten;
+		lambertColor += NdL * uSpotLightColor[i];
+		
+		if(NdL > 0.001){
+			vec3 H = normalize(L - position);
+			float NdH = max(dot(normal, H), 0.0);
+			specularColor += atten * pow(NdH, shininess) * uSpotLightColor[i];
+		}
+
+	}
+
+	for(int i = 0; i < MAX_DIRECTIONAL_LIGHTS; i++)
+	{
+
+	}
+
+	float specularCoef = texture2D(specular0, fTexture).r;
+
+	affectingLight = min(affectingLight, 1.0);	
+	vec4 affectingColor = min(vec4((lambertPower * lambertColor + specularCoef * specularPower * specularColor) * albedo, affectingLight), vec4(1.0));
+	affectingColor.xyz = pow(affectingColor.xyz, vec3(2.2));
+	affectingColor.w = 1.0 - affectingColor.w;
+
+	gl_FragData[0] = affectingColor;
+	//gl_FragData[0].xyz = albedo;
 	gl_FragData[1].rgb = normal * 0.5 + 0.5;
 	gl_FragData[1].a = shininess;
 }

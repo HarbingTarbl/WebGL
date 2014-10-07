@@ -1,10 +1,10 @@
 "use strict"
 
-function LoadShaders(glslPath, bindings, oncomplete){
-    LoadShaderSource(glslPath, function(sources){
+function LoadShaders(glslPath, bindings, oncomplete) {
+    LoadShaderSource(glslPath, function(sources) {
         var programs = {};
-        for (var name in sources){
-            if(sources.hasOwnProperty(name)){
+        for (var name in sources) {
+            if (sources.hasOwnProperty(name)) {
                 programs[name] = new ShaderProgram({
                     vertex: sources[name].vertex,
                     fragment: sources[name].fragment,
@@ -21,41 +21,40 @@ function LoadShaderSource(filename, onload) {
         LoadShaderSource.regex = /^(?=---(?!.*END)(?:.*START\s(\w+)\s)?).*\n((?:(?!---(?:$|.*END)).*\n)+)/gm;
     }
 
-    $.ajax(
-        {
-            url: filename,
-            success: function (data) {
-                var a;
-                var b;
-                var obj = {}
-                data = data.replace(/\r/g, '');
+    $.ajax({
+        url: filename,
+        success: function(data) {
+            var a;
+            var b;
+            var obj = {}
+            data = data.replace(/\r/g, '');
 
-                while ((a = LoadShaderSource.regex.exec(data)) != null && (b = LoadShaderSource.regex.exec(data)) != null) {
-                    if (a.index === LoadShaderSource.regex.lastIndex || b.index == LoadShaderSource.regex.lastIndex) {
-                        LoadShaderSource.regex.lastIndex++;
-                    }
-
-
-                    obj[a[1]] = {
-                        vertex: a[2].trim(),
-                        fragment: b[0].replace('---', '').trim()
-                    };
-
+            while ((a = LoadShaderSource.regex.exec(data)) != null && (b = LoadShaderSource.regex.exec(data)) != null) {
+                if (a.index === LoadShaderSource.regex.lastIndex || b.index == LoadShaderSource.regex.lastIndex) {
+                    LoadShaderSource.regex.lastIndex++;
                 }
-                onload(obj);
-            },
-            accepts: "text",
-            mimeType: "text/plain",
-            dataType: "text",
-            contentType: "text/plain"
-        });
+
+
+                obj[a[1]] = {
+                    vertex: a[2].trim(),
+                    fragment: b[0].replace('---', '').trim()
+                };
+
+            }
+            onload(obj);
+        },
+        accepts: "text",
+        mimeType: "text/plain",
+        dataType: "text",
+        contentType: "text/plain"
+    });
 }
 
 function ShaderProgram(args, mutable) {
     this.valid = false;
 
 
-    if(typeof mutable === "undefined"){
+    if (typeof mutable === "undefined") {
         mutable = false;
     }
 
@@ -85,8 +84,8 @@ function ShaderProgram(args, mutable) {
     gl.attachShader(this.program, vertex);
     gl.attachShader(this.program, fragment);
 
-    if (args.hasOwnProperty("binds")){
-        args.binds.forEach(function(bind){
+    if (args.hasOwnProperty("binds")) {
+        args.binds.forEach(function(bind) {
             gl.bindAttribLocation(this.program, bind[1], bind[0])
         }, this);
     }
@@ -117,7 +116,8 @@ function ShaderProgram(args, mutable) {
         var uniform = gl.getActiveUniform(this.program, i);
         uniform.location = gl.getUniformLocation(this.program, uniform.name);
         var realName = uniform.name;
-        if(uniform.size != 1){
+        if (uniform.name.indexOf("[") != -1) {
+            console.log(uniform.name, uniform);
             realName = uniform.name.substr(0, uniform.name.indexOf("["));
         }
 
@@ -142,10 +142,10 @@ function ShaderProgram(args, mutable) {
                 Object.defineProperty(this.uniform, realName, ShaderProgram.prototype._vec2(uniform.location));
                 break;
             case gl.FLOAT:
-                Object.defineProperty(this.uniform, realName, ShaderProgram.prototype._uniform1f(uniform.location));
+                Object.defineProperty(this.uniform, realName, ShaderProgram.prototype._uniform1f(uniform.location, uniform.size));
                 break;
             case gl.INT:
-                Object.defineProperty(this.uniform, realName, ShaderProgram.prototype._uniform1i(uniform.location));
+                Object.defineProperty(this.uniform, realName, ShaderProgram.prototype._uniform1i(uniform.location, uniform.size));
                 break;
             case gl.SAMPLER_2D:
                 gl.uniform1i(uniform.location, cTeId);
@@ -154,14 +154,14 @@ function ShaderProgram(args, mutable) {
         }
     }
 
-    if(mutable === false){
-        Object.freeze(this.uniform);
-        Object.freeze(this.sampler);
+    if (mutable === false) {
+        //Object.freeze(this.uniform);
+        //Object.freeze(this.sampler);
     }
 
     gl.useProgram(null);
 
-    this.use = function () {
+    this.use = function() {
         gl.useProgram(this.program);
     }
 };
@@ -169,109 +169,131 @@ function ShaderProgram(args, mutable) {
 
 
 
-ShaderProgram.prototype._sampler2D = function(textureId){
+ShaderProgram.prototype._sampler2D = function(textureId) {
     return {
-        set: function(v){
+        set: function(v) {
             gl.activeTexture(gl.TEXTURE0 + textureId);
             gl.bindTexture(gl.TEXTURE_2D, v);
         },
-        get: function(){
+        get: function() {
             return "sampler2D";
         }
     };
 };
 
 
-ShaderProgram.prototype._uniform1f = function(location){
-    return {
-        set: function(v){
-            gl.uniform1f(location, v);
-        },
-        get: function(){
-            return "float";
-        }
-    };
+ShaderProgram.prototype._uniform1f = function(location, size) {
+    if (size == 1) {
+        return {
+            set: function(v) {
+                gl.uniform1f(location, v);
+            },
+            get: function() {
+                return "float";
+            }
+        };
+    } else {
+        return {
+            set: function(v) {
+                gl.uniform1fv(location, v);
+            },
+            get: function() {
+                return "float[" + size + "]";
+            }
+        };
+    }
 };
 
-ShaderProgram.prototype._uniform1i = function(location){
-    return {
-        set: function(v){
-            gl.uniform1i(location, v);
-        },
-        get: function(){
-            return "int";
-        }
-    };
+ShaderProgram.prototype._uniform1i = function(location, size) {
+    if (size == 1) {
+        return {
+            set: function(v) {
+                gl.uniform1i(location, v);
+            },
+            get: function() {
+                return "int";
+            }
+        };
+    } else {
+        return {
+            set: function(v) {
+                gl.uniform1iv(location, v);
+            },
+            get: function() {
+                return "int[" + size + "]";
+            }
+        };
+    }
 };
 
 
-ShaderProgram.prototype._vec2 = function(location){
+ShaderProgram.prototype._vec2 = function(location) {
     return {
-        set: function(v){
+        set: function(v) {
             gl.uniform2fv(location, v);
         },
-        get: function(){
+        get: function() {
             return "vec2";
         }
     };
 };
 
-ShaderProgram.prototype._vec3 = function(location){
+ShaderProgram.prototype._vec3 = function(location) {
     return {
-        set: function(v){
+        set: function(v) {
             gl.uniform3fv(location, v);
         },
-        get: function(){
+        get: function() {
             return "vec3";
         }
     };
 };
 
-ShaderProgram.prototype._vec4 = function(location){
+ShaderProgram.prototype._vec4 = function(location) {
     return {
-        set: function(v){
+        set: function(v) {
             gl.uniform4fv(location, v);
         },
-        get: function(){
+        get: function() {
             return "vec4";
         }
     };
 };
 
-ShaderProgram.prototype._mat2 = function(location){
+ShaderProgram.prototype._mat2 = function(location) {
     return {
-        set: function(v){
+        set: function(v) {
             gl.uniformMatrix2fv(location, false, v);
         },
-        get: function(){
+        get: function() {
             return "mat2";
         }
     };
 };
 
-ShaderProgram.prototype._mat3 = function(location){
+ShaderProgram.prototype._mat3 = function(location) {
     return {
-        set: function(v){
+        set: function(v) {
             gl.uniformMatrix3fv(location, false, v);
         },
-        get: function(){
+        get: function() {
             return "mat3";
         }
     };
 };
 
-ShaderProgram.prototype._mat4 = function(location){
+ShaderProgram.prototype._mat4 = function(location) {
     return {
-        set: function(v){
+        set: function(v) {
             gl.uniformMatrix4fv(location, false, v);
         },
-        get: function(){
+        get: function() {
             return "mat4";
         }
     };
 };
 
 
-ShaderProgram.prototype.use = function(){
+ShaderProgram.prototype.use = function() {
     gl.useProgram(this.program);
 };
