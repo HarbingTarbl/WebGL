@@ -157,9 +157,11 @@ var crytekSSAO = function(width, height, near, far) {
 
                 this.program.sampler.diffuse0 = mesh.material.textures.diffuse0;
                 this.program.sampler.height0 = mesh.material.textures.height0;
+                this.program.sampler.specular0 = mesh.material.textures.specular0;
+
                 this.program.uniform.lambertPower = 0.588;
                 this.program.uniform.shininess = mesh.material.shininess;
-                this.program.uniform.specularPower = 0.588;
+                this.program.uniform.specularPower = 0.3;
                 mesh.Draw();
             };
 
@@ -206,7 +208,7 @@ var crytekSSAO = function(width, height, near, far) {
             pass.program.use();
             pass.program.uniform.uKernel = kernel;
             pass.program.uniform.uNoiseScale = width / 4.0;
-            pass.program.uniform.uKernelSize = 2.0;
+            pass.program.uniform.uKernelSize = 25.0;
             pass.program.uniform.uScreenSize = new Float32Array([width, height]);
             pass.program.uniform.uFar = far;
 
@@ -225,14 +227,12 @@ var crytekSSAO = function(width, height, near, far) {
                 1, -1, 0, 1, 0, 0, 0
             ]);
 
-            me.viewRays = [
+            var viewRays = [
                 new Adapter(data, 3, 4, 1),
                 new Adapter(data, 3, 11, 1),
                 new Adapter(data, 3, 18, 1),
                 new Adapter(data, 3, 25, 1),
             ];
-
-            var viewRays = me.viewRays;
 
             vec4.set(viewRays[0], -1, 1, 1, 1);
             vec4.set(viewRays[1], 1, 1, 1, 1);
@@ -264,6 +264,7 @@ var crytekSSAO = function(width, height, near, far) {
 
             pass.apply = function() {
                 this.use();
+                this.program.uniform.uKernelSize = brdf.properties.ssaoRange;
                 gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
             }
 
@@ -287,7 +288,7 @@ var crytekSSAO = function(width, height, near, far) {
                     this.program.uniform.uSampleDirection = this.apply.sampleDir;
                     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
-                    if (passes === 0) {
+                    if (false && passes === 0) {
                         gl.bindFramebuffer(gl.FRAMEBUFFER, null); //DEBUG
                     } else {
                         gl.bindFramebuffer(gl.FRAMEBUFFER, me.occlusionPass.framebuffer);

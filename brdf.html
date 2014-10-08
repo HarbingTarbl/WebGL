@@ -1,37 +1,33 @@
 <!DOCTYPE html>
 <html>
-<head lang="en">
-<meta charset="UTF-8">
-<style>
 
+<head lang="en">
+    <meta charset="UTF-8">
+    <style>
     * {
         margin: 0;
         padding: 0;
     }
-
     body {
         overflow-y: hidden;
     }
-
     canvas {
         border: none;
         margin: auto;
         float left;
     }
-
     #options {
         float: right;
         position: absolute;
         z-index: 1;
-        right: 1%;
+        right: 100px;
         top: 2%;
         display: inline-block;
         background-color: dimgray;
-        width: 300pt;
-        height: 150pt;
-        padding:5px;
+        width: 300px;
+        height: 150px;
+        padding: 5px;
     }
-
     #options * {
         color: white;
         background-color: dimgray;
@@ -39,64 +35,60 @@
         font-weight: normal;
         font-style: normal;
         font-family: monospace;
-
     }
-
-
-    #options input, #options select {
-        float: right;
-    }
-
-    #options div {
-
-    }
-
-    #options label {
+    #options input,
+    #options select {
         float: left;
     }
-
+    #options div {} #options label {
+        float: left;
+    }
     #options::after {
-        clear:both;
+        clear: both;
     }
-
-</style>
-<title>WebGL</title>
+    </style>
+    <title>WebGL</title>
 </head>
+
 <body onload="startWGL(document.querySelector('canvas'))">
-<canvas id="canvas"></canvas>
-<!-- <div id="options">
-<input type="color" name="lightColor" onchange="var rgb = getRGBValue(this.value); brdf.lights[0][this.name][0] = rgb[0]; console.log(rgb);" />
-<input type="range" name="intensity" min="-1" max="1" />
-<input type="range" name="ambientIntensity" min="-1" max="1" />
-<input type="color" name="direction" />
-</div>
- -->
+    <canvas id="canvas"></canvas>
+    <div id="options">
+        <label for="light-0-check">Point Light 0:</label>
+        <input id="light-0-check" type="checkbox" onclick="lightCheck(this)" data-light="point" data-index="0" data-power="2.0" checked="true" />
 
-<script type="text/javascript">
-function getRGBValue(searchString) {
-    var ingredients = searchString.match(/\d{,3}/g);
-    for (var i in ingredients) {
-        if (parseInt(ingredients[i]) > 255) {
-            return false;
-        }
+        <label for="light-0-check">Point Light 1:</label>
+        <input id="light-0-check" type="checkbox" onclick="lightCheck(this)" data-light="point" data-index="1" data-power="1.0" checked="true" />
+
+        <label for="light-0-check">Spot Light 0:</label>
+        <input id="light-0-check" type="checkbox" onclick="lightCheck(this)" data-light="spot" data-index="0" data-power="1.0" checked="true" />
+    </div>
+
+
+
+    <script type="text/javascript" src="crytek-ssao.js"></script>
+    <script type="text/javascript" src="gl-matrix.js"></script>
+    <script type="text/javascript" src="jquery.js"></script>
+    <script type="text/javascript" src="ShaderProgram.js"></script>
+    <script type="text/javascript" src="BoundingVolume.js"></script>
+    <script type="text/javascript" src="ModelLoader.js"></script>
+    <script type="text/javascript" src="TexturePromise.js"></script>
+    <script type="text/javascript" src="ContentLoader.js"></script>
+    <script type="text/javascript" src="Camera.js"></script>
+    <script type="text/javascript" src="Adapter.js"></script>
+    <script type="text/javascript" src="brdf.js"></script>
+
+    <script type="text/javascript">
+    function lightCheck(k) {
+        var light = k.getAttribute("data-light");
+        var index = k.getAttribute("data-index");
+        var power = k.getAttribute("data-power");
+
+        brdf.lights[light][index].power = k.checked * power;
     }
-
-    return ingredients;
-}
-</script>
-<script type="text/javascript" src="crytek-ssao.js"></script>
-<script type="text/javascript" src="gl-matrix.js"></script>
-<script type="text/javascript" src="jquery.js"></script>
-<script type="text/javascript" src="ShaderProgram.js"></script>
-<script type="text/javascript" src="BoundingVolume.js"></script>
-<script type="text/javascript" src="ModelLoader.js"></script>
-<script type="text/javascript" src="TexturePromise.js"></script>
-<script type="text/javascript" src="ContentLoader.js"></script>
-<script type="text/javascript" src="Camera.js"></script>
-<script type="text/javascript" src="Adapter.js"></script>
-<script type="text/javascript" src="brdf.js"></script>
+    </script>
 
 
 
 </body>
+
 </html>

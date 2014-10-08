@@ -155,8 +155,8 @@ function ShaderProgram(args, mutable) {
     }
 
     if (mutable === false) {
-        //Object.freeze(this.uniform);
-        //Object.freeze(this.sampler);
+        Object.freeze(this.uniform);
+        Object.freeze(this.sampler);
     }
 
     gl.useProgram(null);

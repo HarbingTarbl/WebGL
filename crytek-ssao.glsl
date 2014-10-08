@@ -208,23 +208,28 @@ void main()
 
 
 		float NdL = max(dot(normal, uDirectionalLightDirection[i]), 0.0) * power;
-		lambertColor += NdL * uDirectionalLightColor.rgb;
+		lambertColor += NdL * uDirectionalLightColor[i].rgb;
 		if(NdL > 0.001){
 			vec3 H = normalize(uDirectionalLightDirection[i] - position);
 			float NdH = max(dot(normal, H), 0.0);
-			specularColor += power * pow(NdH, shininess) * uDirectionalLightColor.rgb;
+			specularColor += power * pow(NdH, shininess) * uDirectionalLightColor[i].rgb;
 		}
 	}
 
 	float specularCoef = texture2D(specular0, fTexture).r;
 
-	affectingLight = 1.0 - affectingLight;
-	affectingLight = min(affectingLight, 1.0);	
 	vec4 affectingColor = min(vec4(
-		(lambertPower * lambertColor + 
-		specularCoef * specularPower * specularColor + uAmbientColorPower.rgb * uAmbientColorPower.a) * albedo, affectingLight), vec4(1.0));
+			(
+				lambertPower * lambertColor + 
+				specularCoef * specularPower * specularColor + 
+				uAmbientColorPower.rgb * uAmbientColorPower.a
+			), affectingLight), 
+		vec4(1.0)
+	);
+
+	affectingColor.xyz = affectingColor.xyz * albedo;
 	affectingColor.xyz = pow(affectingColor.xyz, vec3(2.2));
-	affectingColor.w = 1.0 - affectingColor.w;
+	affectingColor.w = affectingColor.a;
 
 	gl_FragData[0] = affectingColor;
 	gl_FragData[1].rgb = normal * 0.5 + 0.5;

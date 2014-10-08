@@ -89,9 +89,6 @@ var brdf = function() {
                 me.pointerIsLocked = true;
             }
 
-
-
-
             me.matrices = {};
             me.event = {};
             me.keys = new Int8Array(255);
@@ -115,18 +112,16 @@ var brdf = function() {
                 _raw_SpotLight_Angle: new Float32Array(maxSpotLights * 3),
                 _raw_SpotLight_Atten: new Float32Array(maxSpotLights * 2),
 
-                _raw_DirectionalLight_Buffer: new Float32Array(maxDirectionalLights * 7),
-                _raw_SpotLight_Buffer: new Float32Array(maxSpotLights * 11),
+                _raw_DirectionalLight_Direction: new Float32Array(maxDirectionalLights * 3),
+                _raw_DirectionalLight_Color: new Float32Array(maxDirectionalLights * 4),
 
-                directional: [],
-                spot: [],
-                point: [],
+                _raw_Ambient_Color: new Float32Array(4),
 
                 transformDirectional: function(camera, light) {
                     if (light.cached)
                         return;
 
-                    vec3.transformMat4(light._direction, light.direction, camera.view());
+                    vec3.transformMat3(light._direction, light.direction, camera.orientation());
                     vec3.normalize(light._direction, light._direction);
                 },
 
@@ -148,8 +143,8 @@ var brdf = function() {
                 },
 
                 uploadUniforms: function(program, lightGroup) {
-                    // program.uniform.uDirectionalLightDirections = lightGroup._raw_Directional_Directions;
-                    // program.uniform.uDirectionalLightColors = lightGroup._raw_Directional_Colors;
+                    program.uniform.uDirectionalLightDirection = lightGroup._raw_DirectionalLight_Direction;
+                    program.uniform.uDirectionalLightColor = lightGroup._raw_DirectionalLight_Color;
 
                     program.uniform.uSpotLightPosition = lightGroup._raw_SpotLight_Position;
                     program.uniform.uSpotLightDirection = lightGroup._raw_SpotLight_Direction;
@@ -157,37 +152,43 @@ var brdf = function() {
                     program.uniform.uSpotLightColor = lightGroup._raw_SpotLight_Color;
                     program.uniform.uSpotLightAttenuation = lightGroup._raw_SpotLight_Atten;
 
-
                     program.uniform.uPointLightPosition = lightGroup._raw_PointLight_Position;
                     program.uniform.uPointLightColor = lightGroup._raw_PointLight_Color;
                     program.uniform.uPointLightRadius = lightGroup._raw_PointLight_Radius;
                     program.uniform.uPointLightCutoff = lightGroup._raw_PointLight_Cutoff;
                     program.uniform.uPointLightPower = lightGroup._raw_PointLight_Power;
 
+                    program.uniform.uAmbientColorPower = lightGroup._raw_Ambient_Color;
+
                 }
             };
 
 
-            // me.lights.directional = Array.apply(null, Array(brdf.lights._raw_Directional_Directions.length / 3)).map(function(_, i) {
-            //     var obj = {
-            //         _direction: new Adapter(brdf.lights._raw_Directional_Directions, 3, i * 3, 1),
-            //         direction: vec3.create(),
-            //         color: new Adapter(brdf.lights._raw_Directional_Colors, 3, i * 4, 1),
-            //         cached: false
-            //     };
+            me.lights.directional = Array.apply(null, Array(maxDirectionalLights)).map(function(_, i) {
 
-            //     Object.defineProperty(obj, 'power', {
-            //         set: function(v) {
-            //             brdf.lights._raw_Directional_Colors[i * 4 + 3] = v;
-            //         },
-            //         get: function() {
-            //             return brdf.lights._raw_Directional_Colors[i * 4 + 3];
-            //         }
-            //     });
+                var dirbuf = brdf.lights._raw_DirectionalLight_Direction;
+                var colbuf = brdf.lights._raw_DirectionalLight_Color;
 
-            //     return obj;
 
-            // });
+                var obj = {
+                    _direction: new Adapter(dirbuf, 3, i * 3, 1),
+                    direction: vec3.create(),
+                    color: new Adapter(colbuf, 3, i * 4, 1),
+                    cached: false
+                };
+
+                Object.defineProperty(obj, 'power', {
+                    set: function(v) {
+                        colbuf[i * 4 + 3] = v;
+                    },
+                    get: function() {
+                        return colbuf[i * 4 + 3];
+                    }
+                });
+
+                return obj;
+
+            });
 
             me.lights.point = Array.apply(null, Array(maxPointLights)).map(function(_, i) {
                 var posbuffer = brdf.lights._raw_PointLight_Position;
@@ -200,6 +201,7 @@ var brdf = function() {
                     _position: new Adapter(posbuffer, 3, i * 3, 1),
                     color: new Adapter(colorbuffer, 3, i * 3, 1),
                     position: vec3.create(),
+                    cached: false,
                 };
 
                 Object.defineProperty(obj, 'radius', {
@@ -245,6 +247,7 @@ var brdf = function() {
                     color: new Adapter(colbuf, 3, i * 3, 1),
                     position: vec3.create(),
                     direction: vec3.create(),
+                    cached: false
                 };
 
                 Object.defineProperty(obj, 'power', {
@@ -295,31 +298,64 @@ var brdf = function() {
                 return obj;
             });
 
+            brdf.lights.ambient = (function() {
+                var colbuf = brdf.lights._raw_Ambient_Color;
+                var obj = {
+                    color: new Adapter(colbuf, 3, 0, 1)
+                };
 
-            brdf.lights.point[0].radius = 500;
-            brdf.lights.point[0].cutoff = 0.5;
-            brdf.lights.point[0].power = 0.0;
+                Object.defineProperty(obj, 'power', {
+                    set: function(v) {
+                        colbuf[3] = v;
+                    },
+                    get: function() {
+                        return colbuf[3];
+                    }
+                });
+
+                return obj;
+            })();
+
+
+
+
+            brdf.lights.point[0].radius = 400;
+            brdf.lights.point[0].cutoff = 0.1;
+            brdf.lights.point[0].power = 1.0;
             vec3.set(brdf.lights.point[0].color, 1, 1, 1);
-            vec3.set(brdf.lights.point[0].position, 0, 100, 0);
+            vec3.set(brdf.lights.point[0].position, 700, 200, 0);
 
+            brdf.lights.point[1].power = 1.0;
+            brdf.lights.point[1].radius = 300;
+            brdf.lights.point[1].cutoff = 0.2;
+            vec3.set(brdf.lights.point[1].color, 1, 1, 0);
+            vec3.set(brdf.lights.point[1].position, -700, 200, 0);
 
-            brdf.lights.point[1].power = 0;
             brdf.lights.point[2].power = 0;
             brdf.lights.point[3].power = 0;
             brdf.lights.point[4].power = 0;
 
+
+
             brdf.lights.spot[0].radius = 1200;
             brdf.lights.spot[0].cutoff = 0.3;
             brdf.lights.spot[0].power = 1.0;
-            brdf.lights.spot[0].innerAngle = Math.cos(45 / 180 * 3.14);
-            brdf.lights.spot[0].outerAngle = Math.cos(80 / 180 * 3.14);
+            brdf.lights.spot[0].innerAngle = Math.cos(1 / 180 * 3.14);
+            brdf.lights.spot[0].outerAngle = Math.cos(20 / 180 * 3.14);
             vec3.set(brdf.lights.spot[0].color, 1, 1, 1);
-            vec3.set(brdf.lights.spot[0].position, 200, 400, 0);
+            vec3.set(brdf.lights.spot[0].position, 100, 200, 0);
             vec3.set(brdf.lights.spot[0].direction, 0, -1, 0);
 
 
 
+            brdf.lights.directional[0].power = 1.0;
+            vec3.set(brdf.lights.directional[0].direction, 1, 1, 1);
+            vec3.set(brdf.lights.directional[0].color, 1, 1, 1);
 
+
+
+            brdf.lights.ambient.power = 0.3;
+            vec3.set(brdf.lights.ambient.color, 1, 1, 1);
 
 
 
@@ -331,8 +367,6 @@ var brdf = function() {
             me.matrices.modelViewProjection = mat4.create();
 
             me.camera = new Camera(75, me.canvas.width / me.canvas.height, 20, 2000);
-            console.log("K");
-            console.log(me.camera._perspectiveMatrix);
             me.ssao = new crytekSSAO(me.settings.width, me.settings.height, 20, 2000);
             me.camera.offsetPosition(0, 0, 3);
             me.ssao.camera = me.camera;
@@ -406,6 +440,27 @@ var brdf = function() {
                 brdf.lights.point.forEach(updatePoint, null);
             };
 
+            brdf.properties = {
+                enableSSAO: true,
+                ssaoRange: 25,
+            };
+
+
+            brdf.ssaoMixerPass = {
+                program: brdf.program.SSAOMixer
+            };
+
+            brdf.ssaoMixerPass.apply = function() {
+                gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+                this.program.use();
+                this.program.sampler.sceneInput = brdf.ssao.gbufferPass.diffuseTexture;
+                this.program.sampler.ssaoInput = brdf.ssao.occlusionPass.occlusionTexture;
+                this.program.uniform.uEnableSSAO = brdf.properties.enableSSAO == false;
+
+
+                gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+            };
+
             return Promise.all([me.ssao.ready()]);
         };
 
@@ -420,6 +475,7 @@ var brdf = function() {
             meshes,
             shaders).then(function(content) {
             for (var x in content) {
+                console.log(x);
                 if (content.hasOwnProperty(x)) {
                     me[x] = content[x];
                 }
@@ -447,6 +503,12 @@ var brdf = function() {
             me.activeProgram.sampler.diffuse0 = mesh.material.textures.diffuse0;
             me.activeProgram.sampler.height0 = mesh.material.textures.height0;
         };
+
+
+        brdf.c = 0.0;
+        brdf.k = 0.01;
+
+
     };
 
     me.draw = function() {
@@ -487,26 +549,31 @@ var brdf = function() {
         // model.Draw(me.drawAxisObject, me.drawAxisMesh);
 
 
+        vec3.transformMat4(brdf.lights.spot[0].direction, [0, -1, 0], mat4.rotateZ(mat4.create(), mat4.create(), brdf.c));
+
+        if (brdf.c > 1.0 || brdf.c < -1.0) {
+            brdf.k *= -1;
+        }
+
+        brdf.c += brdf.k;
+
+
         var pass = brdf.ssao.gbufferPass;
         var model = me.model.sponza;
 
         pass.drawStart();
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-
         brdf.camera.updateLights();
         brdf.lights.uploadUniforms(pass.program, brdf.lights);
-
         pass.drawModel(model);
 
+        pass = brdf.ssao.occlusionPass;
+        pass.apply();
 
+        pass = brdf.ssao.blurPass;
+        pass.apply(3);
 
-        // pass = brdf.ssao.occlusionPass;
-        // pass.apply();
-
-        // pass = brdf.ssao.blurPass;
-        // pass.apply(3);
-
-
+        pass = brdf.ssaoMixerPass;
+        pass.apply();
 
 
         window.requestAnimationFrame(me.draw);
