@@ -52,18 +52,6 @@
 
 <body onload="startWGL(document.querySelector('canvas'))">
     <canvas id="canvas"></canvas>
-    <div id="options">
-        <label for="light-0-check">Point Light 0:</label>
-        <input id="light-0-check" type="checkbox" onclick="lightCheck(this)" data-light="point" data-index="0" data-power="2.0" checked="true" />
-
-        <label for="light-0-check">Point Light 1:</label>
-        <input id="light-0-check" type="checkbox" onclick="lightCheck(this)" data-light="point" data-index="1" data-power="1.0" checked="true" />
-
-        <label for="light-0-check">Spot Light 0:</label>
-        <input id="light-0-check" type="checkbox" onclick="lightCheck(this)" data-light="spot" data-index="0" data-power="1.0" checked="true" />
-    </div>
-
-
 
     <script type="text/javascript" src="crytek-ssao.js"></script>
     <script type="text/javascript" src="gl-matrix.js"></script>
@@ -78,13 +66,7 @@
     <script type="text/javascript" src="brdf.js"></script>
 
     <script type="text/javascript">
-    function lightCheck(k) {
-        var light = k.getAttribute("data-light");
-        var index = k.getAttribute("data-index");
-        var power = k.getAttribute("data-power");
 
-        brdf.lights[light][index].power = k.checked * power;
-    }
     </script>
 
 

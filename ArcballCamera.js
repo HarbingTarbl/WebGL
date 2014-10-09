@@ -1,94 +1,156 @@
-var ArcballCamera = function(target, viewInverse){
-	this.active = false;
-	this.origin = vec2.create();
-	this.start = vec2.create();
-	this.current = vec2.create();
-	this.target = target;
-	this.startSphereCoords = vec4.create();
-	this.currentSphereCoords = vec4.create();
-	this.turnstileAxis = vec4.create();
-    this.viewInverse = mat4.create();
+var ArcballCamera = function(fov, aspect, near, far){
+	this._activeRotation = quat.create();
+	this._orientationQuat = quat.create();
 
-    this.rotationMatrix = mat4.create();
-    this.overallRotation = quat.create()
-    this.startingRotation = quat.create();
-    this.frameRotation = quat.create();
+	this._orientation = mat3.create();
+	this._perspective = mat4.create();
+	this._camera = mat4.create();
+	this._view = mat4.create();
+	this._clickOrigin = vec3.create();
+	this._clickEnd = vec3.create();
+	this._clickCross = vec3.create();
+	this._isRotating = false;
 
-	this.boundOnMouseMove = this.onmousemove.bind(this);
-	this.boundOnMouseUp = this.onmouseup.bind(this);
-	this.boundOnMouseDown = this.onmousedown.bind(this);
+	this._needsOrientationRecalc = false;
 
-	target.addEventListener("mousedown", this.boundOnMouseDown, false);
-	target.addEventListener("mousemove", this.boundOnMouseMove, false);
-	window.addEventListener("mouseup", this.boundOnMouseUp, false);
+	this.position = vec3.create();
+
+	mat4.perspective(this._perspective, fov, aspect, near, far);
 };
 
-ArcballCamera.prototype.resetRotation = function() {
-    mat4.identity(this.rotationMatrix);
+ArcballCamera.prototype.startRotating = function(x, y){
+
 };
 
-ArcballCamera.prototype.calcPoint = function(screen, out){
-	vec4.set(out, 
-		(screen[0] / this.target.width) * 2 - 1,
-		(screen[1] / this.target.height) * -2 + 1, 0, 0);
+ArcballCamera.prototype.update = function(x, y){
 
+};
 
-    out[2] = out[0] * out[0] + out[1] * out[1];
-    if(out[2] >= 1.0){
-        out[2] = 0;
-    } else{
-        out[2] = Math.sqrt(1.0 - out[2]);
-    }
+ArcballCamera.prototype.endMovement = function(x, y){
 
-    vec3.normalize(out, out);
 };
 
 
-ArcballCamera.prototype.onmousemove = function(e){
-	if(this.active === false)
-		return true;
-
-	this.current[0] = e.clientX - this.origin[0];
-	this.current[1] = e.clientY - this.origin[1];
-
-    this.calcPoint(this.current, this.currentSphereCoords);
-    this.angle = Math.acos(Math.min(vec3.dot(this.currentSphereCoords, this.startSphereCoords), 1.0));
-    vec3.cross(this.turnstileAxis, this.currentSphereCoords, this.startSphereCoords);
-
-
-    quat.setAxisAngle(this.frameRotation, this.turnstileAxis, this.angle * -2);
-
-    quat.normalize(this.frameRotation, this.frameRotation);
-
-    quat.mul(this.overallRotation, this.frameRotation, this.startingRotation);
-
-    mat4.fromQuat(this.rotationMatrix, this.overallRotation);
-    this.applyRotation(this.rotationMatrix);
-    return true;
-};	
-
-ArcballCamera.prototype.onmousedown = function(e){
-	if(e.button === 0){
-		this.active = true;
-		this.start[0] = this.current[0] = e.clientX - this.origin[0];
-		this.start[1] = this.current[1] = e.clientY - this.origin[1];
-        this.calcPoint(this.start, this.startSphereCoords);
-        quat.copy(this.startingRotation, this.overallRotation);
+ArcballCamera.prototype.beginRotation = function(x, y){
+	if(this._isRotating === true){
+		return;
 	}
-	return true;
-};
 
-ArcballCamera.prototype.onmouseup = function(e){
-	if(e.button === 0){
-		this.active = false;
+	vec3.set(this._clickOrigin, x, y, Math.sqrt(1.0 - (x*x + y*y)));
+	if(vec3.length(this._clickOrigin) > 1){
+		vec3.normalize(this._clickOrigin, this._clickOrigin);
 	}
-	return true;
+	this._isRotating = true;
+	this._needsOrientationRecalc = false;
 };
 
-ArcballCamera.prototype.onclick = function(e){
+ArcballCamera.prototype.rotateSphere = function(start, end){
+	var a = vec3.fromValues(start[0], start[1], Math.sqrt(1.0 - (vec2.dot(start, start))));
+	var b = vec3.fromValues(end[0], end[0], Math.sqrt(1.0 - vec2.dot(end, end)));
+
+	if(vec3.length(a) > 1)
+		vec3.normalize(a, a);
+
+	if(vec3.length(b) > 1)
+		vec3.normalize(b, b)
+
+	var c = vec3.cross(vec3.create(), a, b);
+	var rot = quat.setAxisAngle(quat.create(), c, Math.acos(vec3.dot(a, b)));
+	return rot;
+};
+
+
+
+ArcballCamera.prototype.startRotation = function(start){
+	vec3.set(this._startingPoint, start[0], start[1], Math.sqrt(1.0 - vec2.dot(start, start)));
+	if(vec3.length(this._startingPoint) > 1){
+		vec3.normalize(this._startingPoint, this._startingPoint);
+	}
+};
+
+ArcballCamera.prototype.updateRotation = function(update){
+	vec3.set(this._currentPoint, update[0], update[1], Math.sqrt(1.0 - vec2.dot(update, update)));
+	if(vec3.length(this._currentPoint) > 1){
+		vec3.normalize(this._currentPoint, this._currentPoint);
+	}
+};
+
+ArcballCamera.prototype.calcRotation = function(out, start, current){
 
 };
 
-ArcballCamera.prototype.applyRotation = function(e){
+ArcballCamera.prototype.applyRotation = function(){
 
+};
+
+ArcballCamera.prototype.endRotation = function(){
+
+}
+
+ArcballCamera.prototype.applyRotationQuat = function(rotation){
+	quat.mul(this._orientationQuat, this._orientationQuat, rotation);
+};
+
+ArcballCamera.prototype.applyRotationMat4 = function(rotation){
+
+};
+
+ArcballCamera.prototype.applyRotationMat3 = function(rotation){
+
+};
+
+ArcballCamera.prototype.updateRotation = function(x, y){
+	if(this._isRotating === false){
+		return;
+	}
+
+
+	vec3.set(this._clickEnd, x, y, Math.sqrt(1.0 - (x*x + y*y)))
+	if(vec3.length(this._clickEnd) > 1){
+		vec3.normalize(this._clickEnd, this._clickEnd);
+	}
+	var angle = Math.acos(vec3.dot(this._clickOrigin, this._clickEnd));
+	vec3.cross(this._clickCross, this._clickOrigin, this._clickEnd);
+	quat.setAxisAngle(this._activeRotation, this._clickCross, angle);
+	quat.normalize(this._activeRotation, this._activeRotation);
+	this._needsOrientationRecalc = true;
+};
+
+ArcballCamera.prototype.endRotation = function(x, y){
+	if(this._isRotating === false)
+		return;
+
+	this.updateRotation(x,y);
+	this.updateOrientation();
+
+
+	this.
+
+
+};
+
+
+ArcballCamera.prototype.update = function(){
+	if(this._needsOrientationRecalc === false)
+		return;
+
+	quat.mul(this._orientationQuat, this._orientationQuat, this._activeRotation);
+	mat3.fromQuat(this._orientation, this._orientationQuat);
+
+	this._needsOrientationRecalc = false;
+	mat4.fromRotationTranslation(this._view, this._orientationQuat, this.position);
+	mat4.mul(this._camera, this._perspective, this._view);
+};
+
+ArcballCamera.prototype.orientation = function(){
+
+	return this._orientation;
+};
+
+ArcballCamera.prototype.view = function(){
+	return this._view;
+};
+
+ArcballCamera.prototype.camera = function(){
+	return this._camera;
 };
