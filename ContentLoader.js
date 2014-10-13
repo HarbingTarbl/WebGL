@@ -50,17 +50,21 @@ ContentLoader.Load = function(bindings, models, shaders, textures) {
             });
             return Promise.resolve();
         }).then(function() {
-            return Promise.all(me.modelsPromises).then(function(models) {
-                me.model = {};
-                models.forEach(function(model) {
-                    me.model[model.name] = model;
-                    // console.log(model);
-                    // for(var name in model){
-                    // 	me.model[name] = model[name];
-                    // }
+            if (me.modelsPromises.length > 0) {
+                return Promise.all(me.modelsPromises).then(function(models) {
+                    me.model = {};
+                    models.forEach(function(model) {
+                        me.model[model.name] = model;
+                        // console.log(model);
+                        // for(var name in model){
+                        //  me.model[name] = model[name];
+                        // }
+                    });
+                    return Promise.resolve();
                 });
+            } else {
                 return Promise.resolve();
-            });
+            }
         }).then(function() {
             me.modelsPromises = null;
             me.shadersPromises = null;
