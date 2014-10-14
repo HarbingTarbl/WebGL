@@ -2,6 +2,7 @@ var env = (function(env) {
     var right = vec3.fromValues(1, 0, 0);
     var up = vec3.fromValues(0, 1, 0);
     var forward = vec3.fromValues(0, 0, -1);
+    var zero = vec3.fromValues(0, 0, 0);
 
     var loadExtensions = function(env, exts) {
         var loaded = {};
@@ -42,6 +43,7 @@ var env = (function(env) {
             this.forward = forward;
             this.right = right;
             this.up = up;
+            this.zero = zero;
 
             window.gl = this.gl;
             window.env = this.env;

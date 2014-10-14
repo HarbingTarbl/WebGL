@@ -25,16 +25,20 @@ var cameras = (function(cameras) {
         },
         update: function() {
             mat3.identity(this.orientationMatrix);
+            this.orientationMatrix[8] *= -1;
             mat3.rotateX(this.orientationMatrix, this.orientationMatrix, this.verticalAngle);
             mat3.rotateY(this.orientationMatrix, this.orientationMatrix, this.horizontalAngle);
             mat3.invert(this.orientationInverseMatrix, this.orientationMatrix);
             vec3.transformMat3(this.forward, env.forward, this.orientationInverseMatrix);
             vec3.transformMat3(this.up, env.up, this.orientationInverseMatrix);
             vec3.transformMat3(this.right, env.right, this.orientationInverseMatrix);
+            vec3.transformMat3(this.position, env.zero, this.orientationInverseMatrix);
             mat4.identity(this.viewMatrix);
+            vec3.scale(this.distance, this.distance, -1);
             mat4.translate(this.viewMatrix, this.viewMatrix, this.distance);
+            vec3.scale(this.distance, this.distance, -1);
             mat4.mul3(this.viewMatrix, this.viewMatrix, this.orientationMatrix);
-            vec3.transformMat4(this.position, this.distance, this.viewMatrix);
+
             mat4.mul(this.cameraMatrix, this.projectionMatrix, this.viewMatrix);
         }
     };
