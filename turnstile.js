@@ -1,11 +1,11 @@
 var cameras = (function(cameras) {
     var turnstile = {
         create: function(fov, aspect, near, far) {
-            return Object.create(proto).init(fov, aspect, near, far);
+            return Object.create(potato).init(fov, aspect, near, far);
         }
     };
 
-    var proto = {
+    var potato = {
         init: function(fov, aspect, near, far) {
             this.cameraMatrix = mat4.create();
             this.projectionMatrix = mat4.create();
@@ -28,16 +28,13 @@ var cameras = (function(cameras) {
             mat3.rotateX(this.orientationMatrix, this.orientationMatrix, this.verticalAngle);
             mat3.rotateY(this.orientationMatrix, this.orientationMatrix, this.horizontalAngle);
             mat3.invert(this.orientationInverseMatrix, this.orientationMatrix);
-
             vec3.transformMat3(this.forward, env.forward, this.orientationInverseMatrix);
             vec3.transformMat3(this.up, env.up, this.orientationInverseMatrix);
             vec3.transformMat3(this.right, env.right, this.orientationInverseMatrix);
-
             mat4.identity(this.viewMatrix);
-            mat4.translate(this.viewMatrix, this.viewMatrix, this.position);
-            mat4.mul3(this.viewMatrix, this.viewMatrix, this.orientationMatrix);
             mat4.translate(this.viewMatrix, this.viewMatrix, this.distance);
-
+            mat4.mul3(this.viewMatrix, this.viewMatrix, this.orientationMatrix);
+            vec3.transformMat4(this.position, this.distance, this.viewMatrix);
             mat4.mul(this.cameraMatrix, this.projectionMatrix, this.viewMatrix);
         }
     };

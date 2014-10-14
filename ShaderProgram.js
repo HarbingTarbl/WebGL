@@ -151,6 +151,10 @@ function ShaderProgram(args, mutable) {
                 gl.uniform1i(uniform.location, cTeId);
                 Object.defineProperty(this.sampler, realName, ShaderProgram.prototype._sampler2D(cTeId++));
                 break;
+            case gl.SAMPLER_CUBE:
+                gl.uniform1i(uniform.location, cTeId);
+                Object.defineProperty(this.sampler, realName, ShaderProgram.prototype._samplerCube(cTeId++));
+                break;
         }
     }
 
@@ -177,6 +181,18 @@ ShaderProgram.prototype._sampler2D = function(textureId) {
         },
         get: function() {
             return "sampler2D";
+        }
+    };
+};
+
+ShaderProgram.prototype._samplerCube = function(textureId) {
+    return {
+        set: function(v) {
+            gl.activeTexture(gl.TEXTURE0 + textureId);
+            gl.bindTexture(gl.TEXTURE_CUBE_MAP, v);
+        },
+        get: function() {
+            return "samplerCube";
         }
     };
 };
