@@ -10,6 +10,7 @@ var cameras = (function(cameras) {
             this.cameraMatrix = mat4.create();
             this.projectionMatrix = mat4.create();
             this.viewMatrix = mat4.create();
+            this.viewInverseMatrix = mat4.create();
             this.orientationMatrix = mat3.create();
             this.orientationInverseMatrix = mat3.create();
             this.verticalAngle = 0;
@@ -32,13 +33,13 @@ var cameras = (function(cameras) {
             vec3.transformMat3(this.forward, env.forward, this.orientationInverseMatrix);
             vec3.transformMat3(this.up, env.up, this.orientationInverseMatrix);
             vec3.transformMat3(this.right, env.right, this.orientationInverseMatrix);
-            vec3.transformMat3(this.position, env.zero, this.orientationInverseMatrix);
             mat4.identity(this.viewMatrix);
             vec3.scale(this.distance, this.distance, -1);
             mat4.translate(this.viewMatrix, this.viewMatrix, this.distance);
             vec3.scale(this.distance, this.distance, -1);
             mat4.mul3(this.viewMatrix, this.viewMatrix, this.orientationMatrix);
-
+            mat4.invert(this.viewInverseMatrix, this.viewMatrix);
+            vec3.transformMat4(this.position, env.zero, this.viewInverseMatrix);
             mat4.mul(this.cameraMatrix, this.projectionMatrix, this.viewMatrix);
         }
     };

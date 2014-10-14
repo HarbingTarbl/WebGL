@@ -34,7 +34,6 @@ var loader = (function(loader) {
                             return Object.assign(obj, value);
                         });
 
-                        console.log(textures);
                         var cubemap = Object.create(proto);
                         cubemap.init(data.name, textures, data.minfilter, data.magfilter);
                         accept(cubemap);
@@ -89,7 +88,6 @@ var loader = (function(loader) {
     var proto = {
         init: function(name, textures, minfilter, magfilter) {
             Object.assign(this, env.createTexture(function(id) {
-                console.log(id);
 
                 gl.bindTexture(gl.TEXTURE_CUBE_MAP, id);
 
@@ -103,7 +101,6 @@ var loader = (function(loader) {
                 gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_T, gl.MIRRORED_REPEAT);
                 gl.generateMipmap(gl.TEXTURE_CUBE_MAP);
                 gl.bindTexture(gl.TEXTURE_CUBE_MAP, null);
-                console.log(gl.isTexture(id));
 
                 return {
                     id: id,

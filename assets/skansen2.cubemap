@@ -1,0 +1,11 @@
+{
+	"name":"skansen2",
+	"+x": "skansen2/negx.jpg",
+	"+y": "skansen2/negy.jpg",
+	"+z": "skansen2/negz.jpg",
+	"-x": "skansen2/posx.jpg",
+	"-y": "skansen2/posy.jpg",
+	"-z": "skansen2/posz.jpg",
+	"minfilter": "LINEAR",
+	"magfilter": "LINEAR"
+}

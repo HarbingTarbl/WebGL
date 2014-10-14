@@ -15,14 +15,34 @@
     canvas {
         width: 100%;
         height: 95%;
+        z-index: 1;
+        float: left;
     }
+    #options {
+        float: right;
+        z-index: 0;
+        position: absolute;
+        right: 5px;
+        top: 5px;
+        width: 300px;
+        height: 150px;
+        color: black;
+        background-color: rgba(128, 128, 128, 0.5);
+    }
+    #options * {}
     </style>
     <title>WebGL</title>
 </head>
 
 <body onload="scene.onload();">
     <canvas id="canvas"></canvas>
-
+    <div id="options">
+        <label for="cube">Cubemap</label>
+        <input name="cube" list="cubemaps" id="cubemaps-input">
+        <datalist id="cubemaps">
+        </datalist>
+    </div>
+    <div style="clear:both"></div>
     <script type="text/javascript" src="gl-matrix.js"></script>
     <script type="text/javascript" src="jquery.js"></script>
     <script type="text/javascript" src="ShaderProgram.js"></script>

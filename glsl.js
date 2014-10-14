@@ -4,8 +4,8 @@ var loader = (function(loader) {
         globalBindings: [
             ["aPosition", 0],
             ["aNormal", 1],
-            ["aBitangent", 2],
-            ["aTangent", 3],
+            ["aTangent", 2],
+            ["aBitangent", 3],
             ["aTexture", 4]
         ],
 

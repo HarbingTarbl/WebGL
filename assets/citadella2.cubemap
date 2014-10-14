@@ -1,0 +1,11 @@
+{
+	"name":"citadella2",
+	"+x": "citadella2/negx.jpg",
+	"+y": "citadella2/negy.jpg",
+	"+z": "citadella2/negz.jpg",
+	"-x": "citadella2/posx.jpg",
+	"-y": "citadella2/posy.jpg",
+	"-z": "citadella2/posz.jpg",
+	"minfilter": "LINEAR",
+	"magfilter": "LINEAR"
+}

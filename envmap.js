@@ -2,14 +2,37 @@ var scene = (function(scene) {
     var loaded = function(assets) {
         window.scene = this;
 
+        var cubeDataSet = document.querySelector("#cubemaps");
+        Object.keys(assets.cubemap).forEach(function(key) {
+            var option = new Option();
+            option.value = key;
+            cubeDataSet.appendChild(option);
+        });
+
+        var cubemaps = assets.cubemap;
+
+        var cubeInput = document.querySelector("#cubemaps-input");
+        cubeInput.addEventListener('input', (function(e) {
+            var selectedMap = cubemaps[cubeInput.value];
+            if (typeof selectedMap === "undefined") {
+                return false;
+            }
+            if (selectedMap === this.cubemap) {
+                return true;
+            }
+            this.cubemap = selectedMap;
+        }).bind(this), false);
+
         this.simpleShader = assets.glsl.SimpleEnvMap;
         this.skyboxProgram = assets.glsl.Skybox;
+        this.cookTorr = assets.glsl.CookTorr;
 
-        this.cube = this.model = assets.model.cube;
+        this.cube = assets.model.cube;
+        this.ico = assets.model.icosphere;
         this.cubemap = assets.cubemap.maskonaive2;
 
         this.camera = cameras.turnstile.create(75 * 3.14 / 180, env.canvas.width / env.canvas.height, 0.1, 100);
-        this.camera.distance = [0, 0, -5];
+        this.camera.distance = [0, 0, 3];
 
         this.mouse = {
             left: {
@@ -40,8 +63,6 @@ var scene = (function(scene) {
         window.addEventListener('mouseup', this.mouseup.bind(this, this.mouse), false);
         window.addEventListener('mousemove', this.mousemove.bind(this, this.mouse), false);
 
-        gl.enable(gl.DEPTH_TEST);
-        gl.enable(gl.CULL_FACE);
 
 
 
@@ -66,20 +87,11 @@ var scene = (function(scene) {
             }
 
             this.camera.update();
-
-            // this.simpleShader.use();
-            // this.simpleShader.uniform.uVPMatrix = this.camera.cameraMatrix;
-            // this.simpleShader.uniform.uEye = this.camera.position;
-            // this.simpleShader.sampler.sEnvMap = this.cubemap.id;
-
-            // this.model.BindBuffers();
-            // this.model.meshes[0].Draw();
-
             this.drawSkybox();
+            this.drawModel();
 
             window.requestAnimationFrame(this.draw);
         },
-
         mousedown: function(mouse, e) {
             switch (e.button) {
                 case 0:
@@ -93,7 +105,6 @@ var scene = (function(scene) {
             }
             this.mousemove(this.mouse, e);
         },
-
         mouseup: function(mouse, e) {
             switch (e.button) {
                 case 0:
@@ -107,15 +118,52 @@ var scene = (function(scene) {
             }
             this.mousemove(this.mouse, e);
         },
-
         mousemove: function(mouse, e) {
             vec2.set(mouse.movement, e.clientX - mouse.position[0], e.clientY - mouse.position[1]);
             vec2.set(mouse.position, e.clientX, e.clientY);
+        },
+        drawCookTorr: function() {
+            gl.enable(gl.DEPTH_TEST);
+            gl.depthMask(true);
+            gl.colorMask(true, true, true, false);
+
+            this.cookTorr.use();
+            this.cookTorr.uniform.uVPMatrix = this.camera.cameraMatrix;
+            this.cookTorr.uniform.uEye = this.camera.position;
+            this.cookTorr.uniform.uLambertCoeff = 1.0;
+            this.cookTorr.uniform.uFresnelCoeff = 0.0;
+            this.cookTorr.uniform.uSurfaceRoughnessSqr = 1.0;
+            this.cookTorr.uniform.uSpecularCoeff = 0.6;
+            this.cookTorr.uniform.uSpecularPower = 300;
+
+            this.cookTorr.sampler.sEnvMap = this.cubemap.id;
+
+            this.ico.BindBuffers();
+            this.ico.meshes[0].Draw();
+        },
+        drawModel: function() {
+            //gl.enable(gl.CULL_FACE);
+            gl.enable(gl.DEPTH_TEST);
+            gl.depthMask(true);
+            gl.colorMask(true, true, true, false);
+
+            this.simpleShader.use();
+            this.simpleShader.uniform.uVPMatrix = this.camera.cameraMatrix;
+            this.simpleShader.uniform.uEye = this.camera.position;
+            this.simpleShader.sampler.sEnvMap = this.cubemap.id;
+
+
+
+            this.ico.BindBuffers();
+            this.ico.meshes[0].Draw();
         },
 
         drawSkybox: function() {
             gl.disable(gl.CULL_FACE);
             gl.disable(gl.DEPTH_TEST);
+            gl.depthMask(false);
+            gl.colorMask(true, true, true, false);
+
             this.cube.BindBuffers();
             this.skyboxProgram.use();
             this.skyboxProgram.uniform.uOMatrix = this.camera.orientationMatrix;
@@ -130,8 +178,11 @@ var scene = (function(scene) {
             loader.load([
                 "assets/cube/cube.model",
                 "envmap.glsl",
-                "assets/sphere/sphere.model",
-                "assets/maskonaive2.cubemap"
+                "assets/ico/icosphere.model",
+                "assets/maskonaive2.cubemap",
+                "assets/skansen2.cubemap",
+                "assets/pereabeach2.cubemap",
+                "assets/citadella2.cubemap",
             ]).then(loaded.bind(Object.create(potato))).catch(function(a) {
                 var err = a.stack;
                 console.log(err);
