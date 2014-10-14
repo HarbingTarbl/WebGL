@@ -10,9 +10,6 @@ var scene = (function(scene) {
     var models = [];
     var textures = [];
     var shaders = ["normals.glsl"];
-    var clamp = function(v, min, max) {
-        return Math.min(max, Math.max(v, min));
-    };
 
     var projectSphere = function(out, point, radius) {
         vec3.set(out, (point[0] - radius / 2) / radius, (point[1] - radius / 2) / radius,
@@ -148,6 +145,7 @@ var scene = (function(scene) {
             console.log(err);
 
             console.log("%cError during inital draw call\n" + a.fileName + " " + a.lineNumber + " " + a, "color:red");
+
         });
     };
 

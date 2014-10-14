@@ -1,0 +1,11 @@
+{
+	"name":"maskonaive2",
+	"+x": "maskonaive2/negx.jpg",
+	"+y": "maskonaive2/negy.jpg",
+	"+z": "maskonaive2/negz.jpg",
+	"-x": "maskonaive2/posx.jpg",
+	"-y": "maskonaive2/posy.jpg",
+	"-z": "maskonaive2/posz.jpg",
+	"minfilter": "LINEAR",
+	"magfilter": "LINEAR"
+}

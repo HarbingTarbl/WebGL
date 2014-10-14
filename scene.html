@@ -9,51 +9,18 @@
         padding: 0;
     }
     body {
-        overflow-y: hidden;
         width: 100%;
         height: 100%;
     }
     canvas {
-        border: none;
-        margin: auto;
         width: 100%;
         height: 100%;
-    }
-    #options {
-        float: right;
-        position: absolute;
-        z-index: 1;
-        right: 100px;
-        top: 2%;
-        display: inline-block;
-        background-color: dimgray;
-        width: 300px;
-        height: 150px;
-        padding: 5px;
-    }
-    #options * {
-        color: white;
-        background-color: dimgray;
-        font-size: 16pt;
-        font-weight: normal;
-        font-style: normal;
-        font-family: monospace;
-    }
-    #options input,
-    #options select {
-        float: left;
-    }
-    #options div {} #options label {
-        float: left;
-    }
-    #options::after {
-        clear: both;
     }
     </style>
     <title>WebGL</title>
 </head>
 
-<body onload="scene()">
+<body onload="scene.onload();">
     <canvas id="canvas"></canvas>
 
     <script type="text/javascript" src="gl-matrix.js"></script>
@@ -65,21 +32,14 @@
     <script type="text/javascript" src="Camera.js"></script>
     <script type="text/javascript" src="Adapter.js"></script>
 
-
     <script type="text/javascript" src="utils.js"></script>
     <script type="text/javascript" src="environment.js"></script>
-    <script type="text/javascript" src="arcball.js"></script>
+    <script type="text/javascript" src="turnstile.js"></script>
     <script type="text/javascript" src="cubemap.js"></script>
     <script type="text/javascript" src="model.js"></script>
     <script type="text/javascript" src="glsl.js"></script>
     <script type="text/javascript" src="loader.js"></script>
-
-
-
-
-    <script type="text/javascript">
-    </script>
-
+    <script type="text/javascript" src="envmap.js"></script>
 
 
 </body>

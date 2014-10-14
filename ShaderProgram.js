@@ -9,7 +9,8 @@ function LoadShaders(glslPath, bindings, oncomplete) {
                     vertex: sources[name].vertex,
                     fragment: sources[name].fragment,
                     binds: bindings
-                }, false); //Change to 'true' to allow mutable. 
+                }, false); //Change to 'true' to allow mutable.
+                programs[name].name = name;
             }
         }
         oncomplete(programs);
@@ -123,7 +124,6 @@ function ShaderProgram(args, mutable) {
 
         switch (uniform.type) {
             case gl.FLOAT_MAT4:
-                console.log(realName);
                 Object.defineProperty(this.uniform, realName, ShaderProgram.prototype._mat4(uniform.location));
                 break;
             case gl.FLOAT_MAT3:
