@@ -2,6 +2,15 @@ var scene = (function(scene) {
     var loaded = function(assets) {
         window.scene = this;
 
+        this.properties = Object.create({}, {
+            uFresnelCoeff: {
+                get: function() {
+                    var val = +(document.querySelector("#uFresnelCoeff").value);
+                    return Math.pow((1.0 - val) / (1.0 + val), 2.0);
+                }
+            }
+        });
+
         var cubeDataSet = document.querySelector("#cubemaps");
         Object.keys(assets.cubemap).forEach(function(key) {
             var option = new Option();
@@ -88,7 +97,7 @@ var scene = (function(scene) {
 
             this.camera.update();
             this.drawSkybox();
-            this.drawModel();
+            this.drawCookTorr();
 
             window.requestAnimationFrame(this.draw);
         },
@@ -131,8 +140,10 @@ var scene = (function(scene) {
             this.cookTorr.uniform.uVPMatrix = this.camera.cameraMatrix;
             this.cookTorr.uniform.uEye = this.camera.position;
             this.cookTorr.uniform.uLambertCoeff = 1.0;
-            this.cookTorr.uniform.uFresnelCoeff = 0.0;
-            this.cookTorr.uniform.uSurfaceRoughnessSqr = 1.0;
+
+            this.cookTorr.uniform.uFresnelCoeff = this.properties.uFresnelCoeff;
+
+            this.cookTorr.uniform.uSurfaceRougnessSqr = 0.3 * 0.3;
             this.cookTorr.uniform.uSpecularCoeff = 0.6;
             this.cookTorr.uniform.uSpecularPower = 300;
 

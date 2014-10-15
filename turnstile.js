@@ -26,7 +26,6 @@ var cameras = (function(cameras) {
         },
         update: function() {
             mat3.identity(this.orientationMatrix);
-            this.orientationMatrix[8] *= -1;
             mat3.rotateX(this.orientationMatrix, this.orientationMatrix, this.verticalAngle);
             mat3.rotateY(this.orientationMatrix, this.orientationMatrix, this.horizontalAngle);
             mat3.invert(this.orientationInverseMatrix, this.orientationMatrix);

@@ -75,7 +75,7 @@ void main()
 
 
 ---
-precision mediump float;
+precision highp float;
 
 uniform samplerCube sEnvMap;
 uniform sampler2D sNormalMap;
@@ -99,7 +99,7 @@ float surfaceRoughness(float NdH)
 	float NdHSqr = NdH * NdH;
 	float denom = 1.0 / (3.14159 * uSurfaceRougnessSqr * NdHSqr * NdHSqr);
 	float expow = (NdHSqr - 1.0) / (uSurfaceRougnessSqr * NdHSqr);
-	return exp(expow) / denom;
+	return exp(expow) * denom;
 }
 
 float geometricAttenuation(float NdH, float NdL, float NdV, float LdH, float VdH)
@@ -111,7 +111,7 @@ float geometricAttenuation(float NdH, float NdL, float NdV, float LdH, float VdH
 
 float fresnelSchlick(float VdH)
 {
-	float fres = pow(1.0 - VdH, 5.0) * 10.0;
+	float fres = pow(1.0 - VdH, 5.0);
 	fres *= (1.0 - uFresnelCoeff);
 	fres += uFresnelCoeff;
 	return fres;
@@ -130,9 +130,8 @@ void main()
 {
 	vec3 normal = normalize(vNormal);
 	vec3 toeye = normalize(uEye - vPosition);
-	vec3 r = reflect(-toeye, normal);
 	vec3 light = normalize(vec3(1));
-	vec3 halfV = normalize(normal + toeye);
+	vec3 halfV = normalize(light + toeye);
 
 	float NdL = max(dot(normal, light), 0.0);
 	float NdH = max(dot(normal, halfV), 0.0);
@@ -144,12 +143,10 @@ void main()
 	vec4 cook = cookTorr(VdH, NdH, NdL, NdV, LdH);
 
 
-	vec3 reflectColor = textureCube(sEnvMap, r).rgb;
+	vec3 reflectColor = vec3(1.0);
 	reflectColor = pow(reflectColor, vec3(1.0 / 2.2));
 
-	gl_FragColor.rgb = vec3(cook.y);
-
-
+	gl_FragColor.rgb = vec3(min((cook.x + NdL) * 0.5 + 0.5, 1.0));
 
 
 
