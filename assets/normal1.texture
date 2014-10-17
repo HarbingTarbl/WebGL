@@ -1,0 +1,8 @@
+{
+	"name":"normal1",
+	"minfilter":"LINEAR",
+	"magfilter":"LINEAR",
+	"wraps":"REPEAT",
+	"wrapt":"REPEAT",
+	"data":"normal1.png",
+}

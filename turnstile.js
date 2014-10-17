@@ -21,6 +21,12 @@ var cameras = (function(cameras) {
             this.right = vec3.create();
             this.up = vec3.create();
 
+            this.viewNormal = mat3.create();
+            this.viewModel = mat4.create();
+
+            this.nearDistance = near;
+            this.farDistance = far;
+
             mat4.perspective(this.projectionMatrix, fov, aspect, near, far);
             return this;
         },
@@ -40,6 +46,12 @@ var cameras = (function(cameras) {
             mat4.invert(this.viewInverseMatrix, this.viewMatrix);
             vec3.transformMat4(this.position, env.zero, this.viewInverseMatrix);
             mat4.mul(this.cameraMatrix, this.projectionMatrix, this.viewMatrix);
+        },
+        viewNormal: function(normal) {
+            return mat3.mul(this.viewNormal.this.orientationMatrix, normal);
+        },
+        viewModel: function(model) {
+            return mat4.mul(this.viewModel, this.viewMatrix, model);
         }
     };
 

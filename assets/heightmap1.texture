@@ -1,0 +1,8 @@
+{
+	"name":"height1",
+	"minfilter":"LINEAR",
+	"magfilter":"LINEAR",
+	"wraps":"REPEAT",
+	"wrapt":"REPEAT",
+	"data":"height1.png",
+}

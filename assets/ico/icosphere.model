@@ -27,15 +27,15 @@
         }
     },
     "data": "icosphere.modeldata",
-    "indexCount": 15360,
-    "indexOffset": 276696,
+    "indexCount": 3840,
+    "indexOffset": 82040,
     "indexSize": 2,
     "materials": {
         "Material": {
             "ambientColor": [
-                1.0,
-                1.0,
-                1.0
+                0.0,
+                0.0,
+                0.0
             ],
             "bumpScale": 0.0,
             "diffuseColor": [
@@ -65,13 +65,15 @@
                 0.5
             ],
             "textures": {
-                "height0": "Normal.png"
+                "normal1" : "Normal.png",
+                "normal2" : "Normal2.png",
+                "height2": "Height2.png"
             }
         }
     },
     "meshes": [
         {
-            "indexCount": 15360,
+            "indexCount": 3840,
             "indexOffset": 0,
             "material": "Material",
             "name": ""
@@ -79,7 +81,7 @@
     ],
     "name": "icosphere",
     "objects": {
-        "Icosphere": {
+        "Icosphere_Low_Icosphere": {
             "meshes": [
                 0
             ],
@@ -103,7 +105,7 @@
             ]
         }
     },
-    "vertexCount": 4941,
+    "vertexCount": 1465,
     "vertexOffset": 0,
     "vertexSize": 56
 }

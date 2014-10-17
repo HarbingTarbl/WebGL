@@ -1,152 +1,309 @@
 "use strict"
-
 var scene = (function(scene) {
-    var bindings = [
-        ["vPosition", 0],
-        ["vNormal", 1],
-        ["vTexture", 4]
-    ];
+    var loaded = function(assets) {
+        window.scene = this;
+        scene = this;
+        gl.enable(gl.DEPTH_TEST);
+        gl.enable(gl.CULL_FACE);
+        gl.frontFace(gl.CCW);
 
-    var models = [];
-    var textures = [];
-    var shaders = ["normals.glsl"];
+        this.cube = assets.model.cube;
+        this.ico = assets.model.icosphere;
 
-    var projectSphere = function(out, point, radius) {
-        vec3.set(out, (point[0] - radius / 2) / radius, (point[1] - radius / 2) / radius,
-            0.0);
+        this.model = this.ico;
+        this.camera = cameras.turnstile.create(75 * 3.14 / 180, env.canvas.width / env.canvas.height, 0.1, 100);
+        this.camera.distance = [0, 0, 3];
 
-        console.log("Point - ", point);
-        console.log("Radius - ", radius);
+        this.noMappingShader = assets.glsl.NoMapping;
+        this.normalMappingShader = assets.glsl.NormalMapping;
+        this.parallaxMappingShader = assets.glsl.ParallaxMapping;
 
+        this.gbufferPass = {
+            init: function() {
+                this.framebuffer = gl.createFramebuffer();
+                this.normalTexture = gl.createTexture();
+                this.albedoTexture = gl.createTexture();
+                this.viewDepthTexture = gl.createTexture();
+                this.projectionDepthRender = gl.createRenderbuffer();
 
-        //out[1] *= 0;
+                gl.bindFramebuffer(gl.FRAMEBUFFER, this.framebuffer);
 
-        var d = vec2.dot(out, out);
-        if (d >= 1.0) {
-            vec2.normalize(out, out);
-        } else {
-            out[2] = Math.sqrt(1.0 - d);
-        }
-        console.log("Out ", out);
-    };
+                var db = env.glext.draw_buffers;
+                gl.bindTexture(gl.TEXTURE_2D, this.normalTexture);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+                gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, canvas.width, canvas.height, 0, gl.RGB, gl.UNSIGNED_BYTE, null);
+                gl.framebufferTexture2D(gl.FRAMEBUFFER, db.COLOR_ATTACHMENT0_WEBGL + 0, gl.TEXTURE_2D, this.normalTexture, 0);
 
+                gl.bindTexture(gl.TEXTURE_2D, this.albedoTexture);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+                gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, canvas.width, canvas.height, 0, gl.RGB, gl.UNSIGNED_BYTE, null);
+                gl.framebufferTexture2D(gl.FRAMEBUFFER, db.COLOR_ATTACHMENT1_WEBGL, gl.TEXTURE_2D, this.albedoTexture, 0);
 
-    return function() {
-        ContentLoader.Load(bindings, models, shaders, textures).then(function(loadedAssets) {
-            console.log("KL");
-            var quad = env.createBuffer(function(buf) {
-                gl.bindBuffer(gl.ARRAY_BUFFER, buf);
-                gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(
-                    [-1, 1, 0, 1, 1, 1, 0, 1, -1, -1, 0, 1, 1, -1, 0, 1]), gl.STATIC_DRAW);
+                gl.bindTexture(gl.TEXTURE_2D, this.viewDepthTexture);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+                gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, canvas.width, canvas.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+                gl.framebufferTexture2D(gl.FRAMEBUFFER, db.COLOR_ATTACHMENT2_WEBGL, gl.TEXTURE_2D, this.viewDepthTexture, 0);
 
-                return Object.create({
-                    bind: function() {
-                        gl.bindBuffer(gl.ARRAY_BUFFER, buf);
-                        gl.enableVertexAttribArray(0);
-                        gl.vertexAttribPointer(0, 4, gl.FLOAT, false, 0, 0);
-                    },
-                    draw: function() {
-                        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-                    }
-                });
-            });
+                gl.bindRenderbuffer(gl.RENDERBUFFER, this.projectionDepthRender);
+                gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, canvas.width, canvas.height);
+                gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, this.projectionDepthRender);
 
-            var scene = window.scene = {};
-
-            scene.programs = loadedAssets.program;
-            scene.camera = cameras.arcball.create(75 * 3.14 / 180, canvas.width / canvas.height, 0.1, 30);
-            scene.clickState = 0; //0 noclick, 1 clickstarted, 2 noclick->clickstarted 3 clickstarted -> noclick
-            scene.mousePos = vec2.create();
-            scene.mouseStart = vec2.create();
-            scene.activeRotation = quat.create();
-            scene.rotationActive = false;
-
-
-            window.xlock = 1;
-            window.ylock = 0;
-
-            window.addEventListener('mousedown', function(e) {
-                scene.mouseStart[0] = e.clientX;
-                scene.mouseStart[1] = e.clientY;
-                scene.rotationActive = true;
-            }, false);
-
-            window.addEventListener('mousemove', function(e) {
-                vec2.set(scene.mousePos,
-                    e.clientX,
-                    e.clientY);
-            }, false);
-
-            window.addEventListener("mouseup", function(e) {
-                scene.rotationActive = false;
-            });
-
-            var proj = mat4.create();
-            var view = mat4.create();
-            var rotation = quat.create();
-            var rotationMatrix = mat4.create();
-            var rvp = mat4.create();
-            mat4.perspective(proj, 75.0 * 3.14 / 180, canvas.width / canvas.height, 0.1, 30);
-            mat4.lookAt(view, [0, 0, -3], [0, 0, 0], [0, 1, 0]);
-
-
-            var draw = function(time) {
-                if (scene.rotationActive == 1) {
-                    var start = vec3.create();
-                    var end = vec3.create();
-
-                    projectSphere(start, scene.mouseStart, 600);
-                    projectSphere(end, scene.mousePos, 600);
-
-                    var tempRotation = quat.create();
-                    var axis = vec3.cross(vec3.create(), start, end);
-                    var angle = (Math.max(0.0, vec3.dot(start, end)));
-                    console.log(axis);
-
-                    console.log("Previous Rotation - ", rotation);
-                    if (Math.abs(angle) > 0.0) {
-                        quat.set(tempRotation, axis[0], axis[1], axis[2], angle);
-                        quat.normalize(tempRotation, tempRotation);
-                        quat.mul(rotation, tempRotation, rotation);
-                    }
-                    console.log("Starting - ", start);
-                    console.log("Ending - ", end);
-                    console.log("Axis - ", axis);
-                    console.log("Mouse Start - ", scene.mouseStart);
-                    console.log("Mouse End - ", scene.mousePos);
-                    console.log("Dot Product - ", angle);
-                    console.log("Frame Rotation - ", tempRotation);
-                    console.log("Product Rotation - ", rotation);
-                    vec2.copy(scene.mouseStart, scene.mousePos);
+                var err = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
+                if (err != gl.FRAMEBUFFER_COMPLETE) {
+                    console.log("Bad Gbuffer dawg");
                 }
 
 
-                var program = scene.programs.blank;
-                program.use();
 
-                mat4.fromQuat(rotationMatrix, rotation);
-                mat4.mul(rvp, proj, view);
-                mat4.mul(rvp, rvp, rotationMatrix);
+                db.drawBuffersWEBGL([
+                    db.COLOR_ATTACHMENT0_WEBGL,
+                    db.COLOR_ATTACHMENT1_WEBGL,
+                    db.COLOR_ATTACHMENT2_WEBGL,
+                ]);
 
-                program.uniform.uMVP = rvp;
+                return this;
+            },
+            begin: function() {
+                gl.bindFramebuffer(gl.FRAMEBUFFER, gbufferPass.framebuffer);
+                gl.enable(gl.DEPTH_TEST);
+                gl.enable(gl.CULL_FACE);
+            },
+            end: function() {
+                gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+            }
+        };
+
+        this.gbufferPass.init();
 
 
-                quad.bind();
-                quad.draw();
 
-                window.requestAnimationFrame(draw);
+
+        var nLights = 7;
+        this.lights = {
+            _raw_PositionBuffer: new Float32Array(nLights * 4),
+            _realloc: function(k) {
+
+            },
+            created: [],
+            ncreated: 0,
+            create: function(init, tick) {
+                var light = {
+                    tick: tick,
+                    init: init,
+                    upload: (function(i) {
+                        return function() {
+                            scene.lights._raw_PositionBuffer[i * 4 + 0] = this.position[0];
+                            scene.lights._raw_PositionBuffer[i * 4 + 1] = this.position[1];
+                            scene.lights._raw_PositionBuffer[i * 4 + 2] = this.position[2];
+                            scene.lights._raw_PositionBuffer[i * 4 + 3] = this.power;
+                        };
+                    })(this.ncreated),
+                    position: vec3.create(),
+                    power: 1.0
+                };
+                this.ncreated += 1;
+                this.created.push(light);
+                return light.init();
+            },
+            upload: function(target) {
+                this.created.forEach(function(v) {
+                    v.upload();
+                });
+                target.uLights = this._raw_PositionBuffer;
+            },
+            tick: function() {
+                this.created.forEach(function(v) {
+                    v.tick();
+                });
+            }
+        };
+
+        (function() {
+            var init = function(x, y, z, p) {
+                return function() {
+                    vec3.set(this.position, x, y, z);
+                    this.power = p;
+                    return this;
+                };
+            };
+            var rotator = function(func, amount) {
+                amount = amount / 180 * 3.14;
+                return function() {
+                    func(this.position, this.position, env.zero, amount * scene.frame.timeDelta);
+                }
+            };
+            var chain = function() {
+                args = Array.apply(null, arguments);
+                return function() {
+                    args.forEach(function(v) {
+                        v(this.position, this.position, amount);
+
+                    }, this);
+                };
             };
 
-            draw();
+            scene.lights.create(init(0, 5, 0, 1), rotator(vec3.rotateX, 30));
+            scene.lights.create(init(0, 5, 0, 1), rotator(vec3.rotateZ, 60));
+            scene.lights.create(init(0, -5, 0, 1), rotator(vec3.rotateX, 60));
+            scene.lights.create(init(5, 0, 0, 1), rotator(vec3.rotateY, 60));
+            scene.lights.create(init(0, 3, 1, 1), rotator(vec3.rotateX, 60));
+            scene.lights.create(init(0, 5, 3, 1), rotator(vec3.rotateZ, 60));
+            scene.lights.create(init(9, 5, 9, 1), rotator(vec3.rotateY, 60));
+            scene.lights.create(init(4, 5, 0, 1), rotator(vec3.rotateX, 60));
+        })();
+        this.mouse = {
+            left: {
+                active: false,
+                down: vec2.create(),
+                up: vec2.create(),
+            },
 
-            return Promise.resolve();
-        }).catch(function(a) {
-            var err = a.stack;
-            console.log(err);
+            right: {
+                active: false,
+                down: vec2.create(),
+                up: vec2.create(),
+            },
 
-            console.log("%cError during inital draw call\n" + a.fileName + " " + a.lineNumber + " " + a, "color:red");
+            position: vec2.create(),
+            movement: vec2.create(),
+        };
 
-        });
+        this.mode = 0;
+
+        this.frame = {
+            count: 0,
+            lastTime: null,
+            time: null,
+            rate: 0,
+            timeDelta: 0
+        };
+
+        window.addEventListener('mousedown', this.mousedown.bind(this, this.mouse), false);
+        window.addEventListener('mouseup', this.mouseup.bind(this, this.mouse), false);
+        window.addEventListener('mousemove', this.mousemove.bind(this, this.mouse), false);
+
+        this.draw = this.draw.bind(this, this.frame);
+        window.requestAnimationFrame(this.draw);
     };
 
+    var potato = {
+        draw: function(frame, time) {
+            frame.time = time;
+            frame.count += 1;
+            frame.timeDelta = (frame.time - frame.lastTime) / 1000.0;
+            frame.rate = frame.count / frame.time;
+            frame.lastTime = time;
+
+            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+            if (this.mouse.left.active) {
+                this.camera.horizontalAngle += frame.timeDelta * this.mouse.movement[0] / 5;
+                this.camera.verticalAngle += frame.timeDelta * this.mouse.movement[1] / 4;
+            }
+
+
+            this.lights.tick();
+            this.camera.update();
+
+
+
+
+            this.displayNormalShader.use();
+            this.displayNormalShader.uniform.uVP = this.camera.cameraMatrix;
+            this.lights.upload(this.displayNormalShader.uniform);
+
+            this.model.BindBuffers();
+            Object.keys(this.model.objects).forEach(function(key) {
+                var obj = this.model.objects[key];
+                obj.meshes.forEach(function(mesh) {
+                    if (scene.mode === 0) {
+                        this.displayNormalShader.sampler.height0 = mesh.material.textures.normal2;
+                    } else if (scene.mode === 1) {
+                        this.displayNormalShader.sampler.height0 = mesh.material.textures.height2;
+                    }
+                    this.displayNormalShader.uniform.uMode = scene.mode;
+                    mesh.Draw();
+                }, this);
+            }, this);
+
+
+
+            window.requestAnimationFrame(this.draw);
+        },
+        applyCameraToProgram: function(program) {
+            program.uniform.uProjectionMatrix = scene.camera.projectionMatrix;
+            program.uniform.uNear = scene.camera.nearDistance;
+            program.uniform.uFar = scene.camera.farDistance;
+        },
+        applyCameraToObject: function(program, object) {
+            program.uniform.uViewModelMatrix = scene.camera.viewMatrix(object.transform);
+            program.uniform.uViewNormalMatrix = scene.camera.normalMatrix(object.normalMatrix);
+        },
+        drawParallaxMapped: function(mesh) {
+            this.parallaxMappingShader.use();
+
+        },
+        drawNormalMapped: function(mesh) {
+            this.normalMappingShader.use();
+
+        },
+        drawNoMapping: function(mesh) {
+            this.noMappingShader.use();
+
+        },
+        mousedown: function(mouse, e) {
+            switch (e.button) {
+                case 0:
+                    mouse.left.active = true;
+                    vec2.set(mouse.left.down, e.clientX, e.clientY);
+                    break;
+                case 2:
+                    mouse.right.active = true;
+                    vec2.set(mouse.right.down, e.clientX, e.clientY);
+                    break;
+            }
+            this.mousemove(this.mouse, e);
+        },
+        mouseup: function(mouse, e) {
+            switch (e.button) {
+                case 0:
+                    mouse.left.active = false;
+                    vec2.set(mouse.left.up, e.clientX, e.clientY);
+                    break;
+                case 2:
+                    mouse.right.active = false;
+                    vec2.set(mouse.right.up, e.clientX, e.clientY);
+                    break;
+            }
+            this.mousemove(this.mouse, e);
+        },
+        mousemove: function(mouse, e) {
+            vec2.set(mouse.movement, e.clientX - mouse.position[0], e.clientY - mouse.position[1]);
+            vec2.set(mouse.position, e.clientX, e.clientY);
+        },
+    };
+
+    return {
+        onload: function() {
+            loader.load([
+                "assets/cube/cube.model",
+                "normals.glsl",
+                "assets/ico/icosphere.model",
+            ]).then(loaded.bind(Object.create(potato))).catch(function(a) {
+                var err = a.stack;
+                console.log(err);
+                console.log("%cError during init loading creation\n" + a.fileName + " " + a.lineNumber + " " + a, "color:red");
+            });
+        }
+    };
 })(scene || {});

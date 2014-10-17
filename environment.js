@@ -13,6 +13,7 @@ var env = (function(env) {
                 var m = re.exec(ext);
                 if (typeof loaded[m[2]] === "undefined") {
                     loaded[m[2]] = extl;
+                    console.log("Loaded ", m[2]);
                 }
             }
         });
@@ -35,7 +36,15 @@ var env = (function(env) {
                 premultipliedAlpha: false,
                 preserveDrawingBuffer: false
             });
-            this.glext = loadExtensions(this, ["OES_texture_float", "OES_texture_float_linear"]);
+            this.glext = loadExtensions(this, [
+                "OES_texture_float",
+                "OES_texture_float_linear",
+                "WEBGL_draw_buffers",
+                "WEBGL_depth_texture",
+                "OES_vertex_array_object",
+                "OES_standard_derivatives",
+                "OES_element_index_uint",
+            ]);
 
             this.textures = {};
             this.framebuffers = {};
@@ -54,9 +63,7 @@ var env = (function(env) {
             return this.textures[texId] = func(texId);
         },
         createBuffer: function(func) {
-            console.log("K");
             var bufId = this.gl.createBuffer();
-            console.log("K");
             return this.buffers[bufId] = func(bufId);
         },
         createFramebuffer: function(func) {
