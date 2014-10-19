@@ -29,7 +29,9 @@
         color: black;
         background-color: rgba(128, 128, 128, 0.5);
     }
-    #options * {}
+    #options * {} #options .hidden_option {
+        visibility: hidden;
+    }
     </style>
     <title>WebGL</title>
 </head>
@@ -37,11 +39,35 @@
 <body onload="scene.onload();">
     <canvas id="canvas"></canvas>
     <div id="options">
-        <label for="cube">Cubemap</label>
-        <input name="cube" list="cubemaps" id="cubemaps-input">
-        <datalist id="cubemaps">
-        </datalist>
-        <input id="uFresnelCoeff" type="range" , min="0" , max="2" , step="0.1">
+        <div id="options_render">
+            <label for="renderMode">Normals Mode</label>
+            <input name="normalsMode" list="normalsMode" id="normalsMode-input">
+            <br />
+            <datalist id="normalsMode">
+                <option value="No Mapping" data-mode="drawNoMapping" data-option="none" />
+                <option value="Normal Mapping" data-mode="drawNormalMapped" data-option="normal" />
+                <option value="Parallax Mapping" data-mode="drawParallaxMapped" data-option="parallax" />
+            </datalist>
+        </div>
+        <div data-tag="options_none" class="hidden_option">
+
+        </div>
+        <div data-tag="options_normal" class="hidden_option">
+
+        </div>
+        <div data-tag="options_parallax" class="hidden_option">
+            <label for="uOffsetLimiting">Offset Limiting</label>
+            <input name="uOffsetLimiting" type="checkbox" oninput="scene.onInput(this)" data-uniform="uOffsetLimiting" />
+            <br />
+
+            <label for="uHeightBias">Height Bias</label>
+            <input name="uHeightBias" type="input" min="-2" max="2" step="0.1" data-uniform="uHeightBias" oninput="scene.onInput(this)" />
+            <br />
+
+            <label for="uHeightScale">Height Scale</label>
+            <input name="uHeightScale" type="input" min="0" max="4" step="0.1" data-uniform="uHeightScale" oninput="scene.onInput(this)" />
+            <br />
+        </div>
     </div>
     <div style="clear:both"></div>
     <script type="text/javascript" src="gl-matrix.js"></script>
