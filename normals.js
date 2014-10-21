@@ -59,7 +59,7 @@ var scene = (function(scene) {
 
         this.model = this.ico;
         this.camera = cameras.turnstile.create(75 * 3.14 / 180, env.canvas.clientWidth / env.canvas.clientHeight, 0.1, 100);
-        this.camera.distance = [0, 0, 3];
+        this.camera.distance = [0, 0, 2];
 
         this.noMappingShader = assets.glsl.NoMapping;
         this.normalMappingShader = assets.glsl.NormalMapping;
@@ -281,6 +281,7 @@ var scene = (function(scene) {
         drawParallaxMapped: function(mesh) {
             var shader = scene.parallaxMappingShader;
             shader.use();
+            shader.uniform.uCameraLocation = scene.camera.position;
 
             Object.keys(scene.options).forEach(function(key) {
                 if (shader.uniform.hasOwnProperty(key)) {

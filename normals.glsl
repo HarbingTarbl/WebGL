@@ -140,7 +140,10 @@ varying vec3 vBitangnet;
 varying vec3 vNormal;
 varying vec2 vTexture;
 varying vec3 vEye;
+varying vec3 vEyeTangent;
 
+
+uniform vec3 uCameraLocation;
 uniform mat3 uViewNormalMatrix;
 uniform mat4 uViewModelMatrix;
 uniform mat4 uProjectionMatrix;
@@ -152,15 +155,20 @@ void main()
 	
 	vPosition = gl_Position.xyz;
 	vEye = -normalize(vPosition);
+
 	vNormal = uViewNormalMatrix * aNormal;
 	vTangent = uViewNormalMatrix * aTangent;
 	vBitangnet = uViewNormalMatrix * aBitangent;
+
+
+	vEyeTangent = (aPosition - uCameraLocation) * mat3(aTangent, aBitangent, aNormal);
+
+
 	vTexture = aTexture;
 	gl_Position = uProjectionMatrix * gl_Position;
 }
 
 ---
-//Zzzzz
 precision highp float;
 
 varying vec3 vPosition;
@@ -169,6 +177,7 @@ varying vec3 vBitangnet;
 varying vec3 vNormal;
 varying vec2 vTexture;
 varying vec3 vEye;
+varying vec3 vEyeTangent;
 
 uniform int uOffsetLimiting;
 uniform float uHeightScale;
@@ -192,9 +201,10 @@ void main()
 	mat3 tbn = mat3(normalize(vTangent), normalize(vBitangnet), normalize(vNormal));
 
 	float height = texture2D(sHeightMap, vTexture).r * uHeightScale - uHeightBias;
-	vec3 eyeTangent = normalize(vEye * tbn);
+	vec3 eyeTangent = normalize(vEyeTangent);
 
-	vec2 offsetTexture = vTexture + height * eyeTangent.xy / eyeTangent.z;
+
+	vec2 offsetTexture = vTexture + height * eyeTangent.xy;
 
 	vec3 normal = normalize(texture2D(sNormalMap, offsetTexture).rgb * 2.0 - 1.0);
 	normal = tbn * normal;
