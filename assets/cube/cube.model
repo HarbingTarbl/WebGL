@@ -64,7 +64,12 @@
                 0.0,
                 0.0
             ],
-            "textures": {}
+            "textures": {
+                "diffuse": "dfxdfy.png",
+                "normal" : "normal.png",
+                "occlusion": "ao.png",
+                "height" : "height.png"
+            }
         }
     },
     "meshes": [

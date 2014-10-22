@@ -167,6 +167,7 @@ function ShaderProgram(args, mutable) {
 
     this.use = function() {
         gl.useProgram(this.program);
+        env.program = this;
     }
 };
 

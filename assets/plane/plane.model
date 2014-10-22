@@ -26,7 +26,7 @@
             "size": 2
         }
     },
-    "data": "plane.obj.modeldata",
+    "data": "plane.modeldata",
     "indexCount": 6,
     "indexOffset": 224,
     "indexSize": 1,
@@ -65,7 +65,10 @@
                 0.80000001192092896
             ],
             "textures": {
-                "diffuse0": "dfxdfy.png"
+                "diffuse": "dfxdfy.png",
+                "normal" : "normal.png",
+                "occlusion": "ao.png",
+                "height" : "height.png"
             }
         }
     },
@@ -76,34 +79,13 @@
             "material": "None",
             "name": ""
         }
-    ],
-    "name": "plane.obj",
+    ], 
+    "name": "plane",
     "objects": {
         "Plane": {
             "meshes": [
                 0
             ],
-            "transform": [
-                1.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                1.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                1.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                1.0
-            ]
-        },
-        "plane.obj": {
-            "meshes": [],
             "transform": [
                 1.0,
                 0.0,

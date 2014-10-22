@@ -48,6 +48,18 @@
                 <option value="Normal Mapping" data-mode="drawNormalMapped" data-option="normal" />
                 <option value="Parallax Mapping" data-mode="drawParallaxMapped" data-option="parallax" />
             </datalist>
+            <label for="enableMirror">Mirror</label>
+            <input name="enableMirror" id="enableMirror" type="checkbox" onclick="scene.onInput(this)">
+            <br />
+            <label for="mirrorPosition">Mirror Position:</label>
+            <input name="mirrorPosition" id="mirrorPosition" value="4, 0, 0" oninput="scene.onInput(this)">
+            <br />
+            <label for="mirrorNormal">Mirror Normal:</label>
+            <input name="mirrorNormal" id="mirrorNormal" value="1, 0, 0" oninput="scene.onInput(this)">
+            <br />
+            <label for="cameraPosition">Camera Origin:</label>
+            <input name="cameraPosition" id="cameraPosition" value="0, 0, 3" oninput="scene.onInput(this)">
+            <br />
         </div>
         <div data-tag="options_none" class="hidden_option">
 

@@ -40,9 +40,17 @@ var scene = (function(scene) {
     var loaded = function(assets) {
         window.scene = this;
         scene = this;
-        this.options = {};
+
+
+
+        scene.options = {
+            mirrorNormal: "1, 0, 0",
+            mirrorPosition: "4, 0, 0",
+            cameraPosition: "0, 0, 3"
+        };
+
         gl.enable(gl.DEPTH_TEST);
-        gl.enable(gl.CULL_FACE);
+        gl.disable(gl.CULL_FACE);
         gl.frontFace(gl.CCW);
         canvas.width = 2048;
         canvas.height = 2048;
@@ -55,11 +63,11 @@ var scene = (function(scene) {
 
 
         this.cube = assets.model.cube;
-        this.ico = assets.model.icosphere;
+        scene.model = scene.cube;
 
-        this.model = this.ico;
         this.camera = cameras.turnstile.create(75 * 3.14 / 180, env.canvas.clientWidth / env.canvas.clientHeight, 0.1, 100);
-        this.camera.distance = [0, 0, 2];
+        this.camera.distance = [0, 0, 6];
+        this.camera.verticalAngle = 45 / 180 * 3.14
 
         this.noMappingShader = assets.glsl.NoMapping;
         this.normalMappingShader = assets.glsl.NormalMapping;
@@ -108,7 +116,6 @@ var scene = (function(scene) {
                 if (err != gl.FRAMEBUFFER_COMPLETE) {
                     console.log("Bad Gbuffer dawg");
                 }
-
 
 
                 db.drawBuffersWEBGL([
@@ -263,25 +270,29 @@ var scene = (function(scene) {
             }
 
 
+
+            vec3.set.bind(null, scene.camera.distance).apply(null, scene.options.cameraPosition.split(",").map(parseFloat));
             this.lights.tick();
             this.camera.update();
 
-            scene[scene.renderType]();
+            if (scene.options.enableMirror === true) {
+                scene.drawMirror(scene[scene.renderType]);
+            } else {
+                scene[scene.renderType]();
+            }
+
             window.requestAnimationFrame(this.draw);
         },
         applyCameraToProgram: function(program) {
-            program.uniform.uProjectionMatrix = scene.camera.projectionMatrix;
-            //program.uniform.uNear = scene.camera.nearDistance;
-            //program.uniform.uFar = scene.camera.farDistance;
+            program.uniform.uProjectionViewMatrix = scene.camera.cameraMatrix;
         },
         applyCameraToObject: function(program, object) {
-            program.uniform.uViewModelMatrix = scene.camera.viewModel(object.transform);
-            program.uniform.uViewNormalMatrix = scene.camera.viewNormal(object.normalMatrix);
+            program.uniform.uModelMatrix = object.transform;
+            program.uniform.uNormalMatrix = object.normalMatrix;
         },
-        drawParallaxMapped: function(mesh) {
+        drawParallaxMapped: function() {
             var shader = scene.parallaxMappingShader;
             shader.use();
-            shader.uniform.uCameraLocation = scene.camera.position;
 
             Object.keys(scene.options).forEach(function(key) {
                 if (shader.uniform.hasOwnProperty(key)) {
@@ -294,13 +305,13 @@ var scene = (function(scene) {
                 var object = scene.model.objects[key];
                 scene.applyCameraToObject(shader, object);
                 object.meshes.forEach(function(mesh) {
-                    shader.sampler.sNormalMap = mesh.material.textures.normal2;
-                    shader.sampler.sHeightMap = mesh.material.textures.height2;
+                    shader.sampler.sNormalMap = mesh.material.textures.normal;
+                    shader.sampler.sHeightMap = mesh.material.textures.height;
                     mesh.Draw();
                 });
             });
         },
-        drawNormalMapped: function(mesh) {
+        drawNormalMapped: function() {
             var shader = scene.normalMappingShader;
             shader.use();
             scene.applyCameraToProgram(shader);
@@ -309,23 +320,33 @@ var scene = (function(scene) {
                 var object = scene.model.objects[key];
                 scene.applyCameraToObject(shader, object);
                 object.meshes.forEach(function(mesh) {
-                    shader.sampler.sNormalMap = mesh.material.textures.normal2;
+                    shader.sampler.sNormalMap = mesh.material.textures.normal;
                     mesh.Draw();
                 });
             });
 
         },
-        drawNoMapping: function(mesh) {
-            this.noMappingShader.use();
-            this.applyCameraToProgram(scene.noMappingShader);
+        drawNoMapping: function() {
+            scene.noMappingShader.use();
+            scene.applyCameraToProgram(scene.noMappingShader);
             scene.model.BindBuffers();
-            Object.keys(this.model.objects).forEach(function(key) {
+            Object.keys(scene.model.objects).forEach(function(key) {
                 var object = scene.model.objects[key];
                 scene.applyCameraToObject(scene.noMappingShader, object);
                 object.meshes.forEach(function(mesh) {
                     mesh.Draw();
                 });
             });
+        },
+        drawMirror: function(drawerer) {
+            env.program.uniform.uMirror = 0;
+            drawerer();
+
+            env.program.uniform.uMirrorNormal = vec3.normalize(vec3.create(), vec3.fromValues.apply(null, scene.options.mirrorNormal.split(",").map(parseFloat)));
+            env.program.uniform.uMirrorPosition = vec3.fromValues.apply(null, scene.options.mirrorPosition.split(",").map(parseFloat));
+            env.program.uniform.uMirror = 1;
+            drawerer();
+            env.program.uniform.uMirror = 0;
         },
         mousedown: function(mouse, e) {
             if (clickWithin(e.clientX, e.clientY, scene.options_window))
@@ -361,7 +382,15 @@ var scene = (function(scene) {
             vec2.set(mouse.position, e.clientX, e.clientY);
         },
         onInput: function(e) {
-            scene.options[e.dataset.uniform] = e.value;
+            console.log(e.value);
+            if (typeof e.dataset.uniform != "undefined")
+                scene.options[e.dataset.uniform] = e.value;
+            else {
+                if (e.type === "checkbox")
+                    scene.options[e.name] = e.checked;
+                else if (e.type === "text")
+                    scene.options[e.name] = e.value;
+            }
         }
     };
 
@@ -370,7 +399,6 @@ var scene = (function(scene) {
             loader.load([
                 "assets/cube/cube.model",
                 "normals.glsl",
-                "assets/ico/icosphere.model",
             ]).then(loaded.bind(Object.create(potato))).catch(function(a) {
                 var err = a.stack;
                 console.log(err);

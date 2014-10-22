@@ -11,21 +11,33 @@ varying vec3 vBitangnet;
 varying vec3 vNormal;
 varying vec2 vTexture;
 
-uniform mat3 uViewNormalMatrix;
-uniform mat4 uViewModelMatrix;
-uniform mat4 uProjectionMatrix;
+uniform mat3 uNormalMatrix;
+uniform mat4 uModelMatrix;
+uniform mat4 uProjectionViewMatrix;
+
+uniform vec3 uMirrorPosition;
+uniform vec3 uMirrorNormal;
+uniform int uMirror;
 
 void main()
 {
 	gl_Position = vec4(aPosition, 1.0);
-	gl_Position = uViewModelMatrix * gl_Position;
+	gl_Position = uModelMatrix * gl_Position;
+	vNormal = uNormalMatrix * aNormal;
+	vTangent = uNormalMatrix * aTangent;
+	vBitangnet = uNormalMatrix * aBitangent;
+
+	if(uMirror == 1)
+	{
+		vec3 toMirror = (gl_Position.xyz - uMirrorPosition);
+		gl_Position.xyz = gl_Position.xyz - 2.0 * dot(toMirror, uMirrorNormal) * uMirrorNormal;
+	}
 	
 	vPosition = gl_Position.xyz;
-	vNormal = uViewNormalMatrix * aNormal;
-	vTangent = uViewNormalMatrix * aTangent;
-	vBitangnet = uViewNormalMatrix * aBitangent;
+
+
 	vTexture = aTexture;
-	gl_Position = uProjectionMatrix * gl_Position;
+	gl_Position = uProjectionViewMatrix * gl_Position;
 }
 //Todo be able to break shaders into bits.
 //Another todo. WebGL shader compiler
@@ -55,9 +67,10 @@ vec4 pack_depth(const in float depth)
 
 void main()
 {
-	gl_FragColor.rgb = vNormal * 0.5 + 0.5;
-	//gl_FragData[1].rgb = vNormal * 0.5 + 0.5;
-	//gl_FragData[2].rgba = pack_depth((-vPosition.z - uViewNear) / (uViewFar - uViewNear)); //Given how my cameras work, this should be +
+	float ff = gl_FrontFacing ? 1.0 : 1.0;
+	vec3 normal = normalize(vNormal) * ff;
+	gl_FragColor.rgb = vec3(min(max(dot(normal, normalize(vec3(1))), 0.0) + 0.1, 1.0));
+	gl_FragColor.rgb = pow(gl_FragColor.rgb, vec3(1.0 / 2.2));
 }
 
 --- END ---
@@ -75,23 +88,32 @@ varying vec3 vBitangnet;
 varying vec3 vNormal;
 varying vec2 vTexture;
 
-uniform mat3 uViewNormalMatrix;
-uniform mat4 uViewModelMatrix;
-uniform mat4 uProjectionMatrix;
+uniform mat3 uNormalMatrix;
+uniform mat4 uModelMatrix;
+uniform mat4 uProjectionViewMatrix;
+
+uniform vec3 uMirrorPosition;
+uniform vec3 uMirrorNormal;
+uniform int uMirror;
 
 void main()
 {
 	gl_Position = vec4(aPosition, 1.0);
-	gl_Position = uViewModelMatrix * gl_Position;
+	gl_Position = uModelMatrix * gl_Position;
+
+	if(uMirror == 1)
+	{
+		vec3 toMirror = (gl_Position.xyz - uMirrorPosition);
+		gl_Position.xyz = gl_Position.xyz - 2.0 * dot(toMirror, uMirrorNormal) * uMirrorNormal;
+	}
 	
 	vPosition = gl_Position.xyz;
-	vNormal = uViewNormalMatrix * aNormal;
-	vTangent = uViewNormalMatrix * aTangent;
-	vBitangnet = uViewNormalMatrix * aBitangent;
+	vNormal = uNormalMatrix * aNormal;
+	vTangent = uNormalMatrix * aTangent;
+	vBitangnet = uNormalMatrix * aBitangent;
 	vTexture = aTexture;
-	gl_Position = uProjectionMatrix * gl_Position;
+	gl_Position = uProjectionViewMatrix * gl_Position;
 }
-
 ---
 //Bla bla
 precision highp float;
@@ -122,7 +144,8 @@ void main()
 	normal = tbn * normal;
 
 
-	gl_FragColor.rgb = normal * 0.5 + 0.5;
+	gl_FragColor.rgb = vec3(min(max(dot(normal, normalize(vec3(1))), 0.0) + 0.1, 1.0));
+	gl_FragColor.rgb = pow(gl_FragColor.rgb, vec3(1.0 / 2.2));
 }
 
 --- END ---
@@ -139,33 +162,40 @@ varying vec3 vTangent;
 varying vec3 vBitangnet;
 varying vec3 vNormal;
 varying vec2 vTexture;
-varying vec3 vEye;
 varying vec3 vEyeTangent;
 
 
 uniform vec3 uCameraLocation;
-uniform mat3 uViewNormalMatrix;
-uniform mat4 uViewModelMatrix;
-uniform mat4 uProjectionMatrix;
+uniform mat3 uNormalMatrix;
+uniform mat4 uModelMatrix;
+uniform mat4 uProjectionViewMatrix;
+
+
+uniform vec3 uMirrorPosition;
+uniform vec3 uMirrorNormal;
+uniform int uMirror;
 
 void main()
 {
 	gl_Position = vec4(aPosition, 1.0);
-	gl_Position = uViewModelMatrix * gl_Position;
+	gl_Position = uModelMatrix * gl_Position;
 	
 	vPosition = gl_Position.xyz;
-	vEye = -normalize(vPosition);
 
-	vNormal = uViewNormalMatrix * aNormal;
-	vTangent = uViewNormalMatrix * aTangent;
-	vBitangnet = uViewNormalMatrix * aBitangent;
-
-
-	vEyeTangent = (aPosition - uCameraLocation) * mat3(aTangent, aBitangent, aNormal);
+	if(uMirror == 1)
+	{
+		vec3 toMirror = (gl_Position.xyz - uMirrorPosition);
+		gl_Position.xyz = gl_Position.xyz - 2.0 * dot(toMirror, uMirrorNormal) * uMirrorNormal;
+	}
 
 
+	vNormal = uNormalMatrix * aNormal;
+	vTangent = uNormalMatrix * aTangent;
+	vBitangnet = uNormalMatrix * aBitangent;
+
+	vEyeTangent = (uCameraLocation - vPosition) * mat3(vTangent, vBitangnet, vNormal);
 	vTexture = aTexture;
-	gl_Position = uProjectionMatrix * gl_Position;
+	gl_Position = uProjectionViewMatrix * gl_Position;
 }
 
 ---
@@ -176,7 +206,6 @@ varying vec3 vTangent;
 varying vec3 vBitangnet;
 varying vec3 vNormal;
 varying vec2 vTexture;
-varying vec3 vEye;
 varying vec3 vEyeTangent;
 
 uniform int uOffsetLimiting;
@@ -199,10 +228,8 @@ vec4 pack_depth(const in float depth)
 void main()
 {
 	mat3 tbn = mat3(normalize(vTangent), normalize(vBitangnet), normalize(vNormal));
-
-	float height = texture2D(sHeightMap, vTexture).r * uHeightScale - uHeightBias;
+	float height = texture2D(sHeightMap, vTexture).r * uHeightScale + uHeightBias;
 	vec3 eyeTangent = normalize(vEyeTangent);
-
 
 	vec2 offsetTexture = vTexture + height * eyeTangent.xy;
 
@@ -210,12 +237,147 @@ void main()
 	normal = tbn * normal;
 
 
-	gl_FragColor.rgb = normal * 0.5 + 0.5;
+	gl_FragColor.rgb = vec3(min(max(dot(normal, normalize(vec3(1))), 0.0) + 0.1, 1.0));
+	gl_FragColor.rgb = pow(gl_FragColor.rgb, vec3(1.0 / 2.2));
 }
-
 
 --- END ---
 
+
+--- START ReliefMapping ---
+attribute vec3 aPosition;
+attribute vec3 aNormal;
+attribute vec3 aTangent;
+attribute vec3 aBitangent;
+attribute vec2 aTexture;
+
+varying vec3 vPosition;
+varying vec3 vTangent;
+varying vec3 vBitangnet;
+varying vec3 vNormal;
+varying vec2 vTexture;
+
+varying vec3 vParallaxDirection;
+varying vec3 vParallaxLight;
+
+
+
+uniform vec3 uCameraLocation;
+uniform mat3 uNormalMatrix;
+uniform mat4 uModelMatrix;
+uniform mat4 uProjectionViewMatrix;
+
+
+uniform vec3 uMirrorPosition;
+uniform vec3 uMirrorNormal;
+uniform int uMirror;
+
+void main()
+{
+	gl_Position.xyz = aPosition;
+	gl_Position.w = 1;
+	gl_Position = uModelMatrix * gl_Position;
+
+	if(uMirror == 1)
+	{
+		vec3 toMirror = (gl_Position.xyz - uMirrorPosition);
+		gl_Position.xyz = gl_Position.xyz - 2.0 * dot(toMirror, uMirrorNormal) * uMirrorNormal;
+	}
+
+	vPosition = gl_Position.xyz;
+	vTangent = uNormalMatrix * aTangent;
+	vBitangnet = uNormalMatrix * aBitangent;
+	vNormal = uNormalMatrix * aNormal;
+
+
+	mat3 toTangent = mat3(vTangent, vBitangnet, vNormal);
+
+	vParallaxDirection = (uCameraLocation - vPosition) * toTangent;
+	vParallaxLight = normalize(vec3(1)) * toTangent;
+
+	vTexture = aTexture;
+	gl_Position = uProjectionViewMatrix * gl_Position;
+}
+
+---
+
+varying vec3 vPosition;
+varying vec3 vTangent;
+varying vec3 vBitangnet;
+varying vec3 vNormal;
+varying vec2 vTexture;
+
+varying vec3 vParallaxDirection;
+varying vec3 vParallaxLight;
+
+#define NUM_SAMPLES 16
+
+uniform sampler2D sHeightMap;
+
+
+
+float cross2d(vec2 x, vec2 y)
+{
+	return x.x * y.y - x.y * y.x;
+}
+
+
+void main()
+{
+	mat3 tbn = mat3(
+		normalize(vTangent),
+		normalize(vBitangnet),
+		normalize(vNormal)
+		);
+
+
+
+
+	float limit = -length(vParallaxDirection.xy) / vParallaxDirection.z;
+	limit *= uHeightScale;
+
+
+	vec2 offset = normalize(vParallaxDirection.xy);
+	vec2 maxOffset = offset * limit;
+
+	float cRayHeight = 1.0;
+	vec2 cOffset = vec2(0);
+	vec2 lOffset = cOffset;
+	float cSampleHeight = 1.0;
+	float lSampleHeight = 1.0;
+	float step = 1.0 / float(NUM_SAMPLES);
+	int cSample = 0;
+
+
+
+
+	while(cSample < NUM_SAMPLES)
+	{
+		cSampleHeight = texture2D(sHeightMap, vTexture + cOffset).r;
+		if(cSampleHeight > cRayHeight)
+		{
+			float d1, d2;
+			d1 = cSampleHeight - cRayHeight;
+			d2 = (cRayHeight + step) - lSampleHeight;
+			float r = d1 / (d1 + d2);
+			cOffset = r * lOffset + (1.0 - r) * cOffset;
+			cSample = NUM_SAMPLES;
+		}
+		else
+		{
+			cSample++;
+
+		}
+
+	}
+
+
+
+
+	gl_FragColor = vec4(0);
+}
+
+--- END ---
 
 
 
