@@ -275,7 +275,7 @@ uniform int uMirror;
 void main()
 {
 	gl_Position.xyz = aPosition;
-	gl_Position.w = 1;
+	gl_Position.w = 1.0;
 	gl_Position = uModelMatrix * gl_Position;
 
 	if(uMirror == 1)
@@ -301,6 +301,8 @@ void main()
 
 ---
 
+precision highp float;
+
 varying vec3 vPosition;
 varying vec3 vTangent;
 varying vec3 vBitangnet;
@@ -311,6 +313,8 @@ varying vec3 vParallaxDirection;
 varying vec3 vParallaxLight;
 
 #define NUM_SAMPLES 16
+
+uniform float uHeightScale;
 
 uniform sampler2D sHeightMap;
 
@@ -341,17 +345,13 @@ void main()
 	vec2 maxOffset = offset * limit;
 
 	float cRayHeight = 1.0;
-	vec2 cOffset = vec2(0);
+	vec2 cOffset = vec2(0.0);
 	vec2 lOffset = cOffset;
 	float cSampleHeight = 1.0;
 	float lSampleHeight = 1.0;
 	float step = 1.0 / float(NUM_SAMPLES);
-	int cSample = 0;
 
-
-
-
-	while(cSample < NUM_SAMPLES)
+	for(int cSample = 0; cSample < NUM_SAMPLES; cSample++)
 	{
 		cSampleHeight = texture2D(sHeightMap, vTexture + cOffset).r;
 		if(cSampleHeight > cRayHeight)
@@ -361,11 +361,10 @@ void main()
 			d2 = (cRayHeight + step) - lSampleHeight;
 			float r = d1 / (d1 + d2);
 			cOffset = r * lOffset + (1.0 - r) * cOffset;
-			cSample = NUM_SAMPLES;
+			break;
 		}
 		else
 		{
-			cSample++;
 
 		}
 
