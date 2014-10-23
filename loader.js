@@ -40,15 +40,8 @@ var loader = (function(_loader) {
                             ret[value.type] = {};
                         }
 
-                        if (value.type === "model" || value.type === "cubemap") {
-                            ret[value.type][value.name] = value;
-                        } else if (value.type === "glsl") {
-                            Object.keys(value).forEach(function(key) {
-                                if (key === "type")
-                                    return;
-                                ret.glsl[key] = value[key];
-                            });
-                        }
+                        ret[value.type][value.name] = value;
+
                     });
 
                     return ret;

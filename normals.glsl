@@ -1,19 +1,31 @@
---- START NoMapping ---
+--- attributes
 attribute vec3 aPosition;
 attribute vec3 aNormal;
 attribute vec3 aTangent;
 attribute vec3 aBitangent;
 attribute vec2 aTexture;
 
+
+--- varyings
 varying vec3 vPosition;
 varying vec3 vTangent;
 varying vec3 vBitangnet;
 varying vec3 vNormal;
 varying vec2 vTexture;
 
+
+--- camera uniforms
 uniform mat3 uNormalMatrix;
 uniform mat4 uModelMatrix;
 uniform mat4 uProjectionViewMatrix;
+uniform vec3 uCameraLocation;
+
+
+
+--- NoMapping.Vertex
+#include attributes
+#include varyings
+#include camera uniforms
 
 uniform vec3 uMirrorPosition;
 uniform vec3 uMirrorNormal;
@@ -41,7 +53,7 @@ void main()
 }
 //Todo be able to break shaders into bits.
 //Another todo. WebGL shader compiler
----
+--- NoMapping.Fragment
 precision highp float;
 
 varying vec3 vPosition;
@@ -73,9 +85,7 @@ void main()
 	gl_FragColor.rgb = pow(gl_FragColor.rgb, vec3(1.0 / 2.2));
 }
 
---- END ---
-
---- START NormalMapping ---
+---NormalMapping
 attribute vec3 aPosition;
 attribute vec3 aNormal;
 attribute vec3 aTangent;
@@ -114,8 +124,8 @@ void main()
 	vTexture = aTexture;
 	gl_Position = uProjectionViewMatrix * gl_Position;
 }
----
-//Bla bla
+
+
 precision highp float;
 
 uniform sampler2D sNormalMap;
@@ -148,9 +158,8 @@ void main()
 	gl_FragColor.rgb = pow(gl_FragColor.rgb, vec3(1.0 / 2.2));
 }
 
---- END ---
 
---- START ParallaxMapping ---
+---ParallaxMapping
 attribute vec3 aPosition;
 attribute vec3 aNormal;
 attribute vec3 aTangent;
@@ -199,7 +208,7 @@ void main()
 	gl_Position = uProjectionViewMatrix * gl_Position;
 }
 
----
+
 precision highp float;
 
 varying vec3 vPosition;
@@ -253,10 +262,8 @@ void main()
 	gl_FragColor.rgb = pow(gl_FragColor.rgb, vec3(1.0 / 2.2));
 }
 
---- END ---
 
-
---- START ReliefMapping ---
+--- ReliefMapping
 attribute vec3 aPosition;
 attribute vec3 aNormal;
 attribute vec3 aTangent;
@@ -310,8 +317,6 @@ void main()
 	vTexture = aTexture;
 	gl_Position = uProjectionViewMatrix * gl_Position;
 }
-
----
 
 precision highp float;
 
@@ -406,8 +411,4 @@ void main()
 
 	//gl_FragColor.rgb = normal * 0.5 + 0.5;
 }
-
---- END ---
-
-
 

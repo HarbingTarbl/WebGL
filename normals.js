@@ -62,6 +62,7 @@ var scene = (function(scene) {
 
 
 
+        console.log("O", assets.glsl);
         this.cube = assets.model.cube;
         scene.model = scene.cube;
 
@@ -69,7 +70,7 @@ var scene = (function(scene) {
         this.camera.distance = [0, 0, 6];
         this.camera.verticalAngle = 45 / 180 * 3.14
 
-        this.noMappingShader = assets.glsl.NoMapping;
+        this.noMappingShader = assets.glsl.normals.createProgram("NoMapping.Vertex", "NoMapping.Fragment");
         this.normalMappingShader = assets.glsl.NormalMapping;
         this.parallaxMappingShader = assets.glsl.ParallaxMapping;
         scene.occlusionMappingShader = assets.glsl.ReliefMapping;
