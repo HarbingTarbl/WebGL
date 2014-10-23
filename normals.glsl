@@ -144,7 +144,7 @@ void main()
 	normal = tbn * normal;
 
 
-	gl_FragColor.rgb = vec3(min(max(dot(normal, normalize(vec3(1))), 0.0) + 0.1, 1.0));
+	gl_FragColor.rgb = vec3(min(max(dot(normal, normalize(vec3(1))), 0.0) + 0.0, 1.0));
 	gl_FragColor.rgb = pow(gl_FragColor.rgb, vec3(1.0 / 2.2));
 }
 
@@ -193,7 +193,8 @@ void main()
 	vTangent = uNormalMatrix * aTangent;
 	vBitangnet = uNormalMatrix * aBitangent;
 
-	vEyeTangent = (uCameraLocation - vPosition) * mat3(vTangent, vBitangnet, vNormal);
+	vEyeTangent = (vPosition - uCameraLocation) * mat3(vTangent, vBitangnet, vNormal);
+
 	vTexture = aTexture;
 	gl_Position = uProjectionViewMatrix * gl_Position;
 }
@@ -214,6 +215,8 @@ uniform float uHeightBias;
 
 uniform sampler2D sNormalMap;
 uniform sampler2D sHeightMap;
+uniform sampler2D sDiffuseMap;
+
 
 //Courtesy of .... Some Dude On The Inter-Tubes.
 vec4 pack_depth(const in float depth)
@@ -228,8 +231,13 @@ vec4 pack_depth(const in float depth)
 void main()
 {
 	mat3 tbn = mat3(normalize(vTangent), normalize(vBitangnet), normalize(vNormal));
-	float height = texture2D(sHeightMap, vTexture).r * uHeightScale + uHeightBias;
-	vec3 eyeTangent = normalize(vEyeTangent);
+	float height = texture2D(sHeightMap, vTexture).r * uHeightScale;
+	vec3 eyeTangent = normalize(-vEyeTangent);
+
+	gl_FragColor.rgb = vec3(max(dot(eyeTangent, tbn[2] * tbn), 0.0));
+	return;
+
+
 
 	vec2 offsetTexture = vTexture + height * eyeTangent.xy;
 
@@ -237,7 +245,11 @@ void main()
 	normal = tbn * normal;
 
 
-	gl_FragColor.rgb = vec3(min(max(dot(normal, normalize(vec3(1))), 0.0) + 0.1, 1.0));
+
+	float light = min(max(dot(normal, normalize(vec3(1))), 0.0) + 0.1, 1.0);
+	vec3 color = texture2D(sDiffuseMap, offsetTexture).rgb;
+
+	gl_FragColor.rgb = color * light;
 	gl_FragColor.rgb = pow(gl_FragColor.rgb, vec3(1.0 / 2.2));
 }
 
@@ -312,11 +324,13 @@ varying vec2 vTexture;
 varying vec3 vParallaxDirection;
 varying vec3 vParallaxLight;
 
-#define NUM_SAMPLES 16
+#define NUM_SAMPLES 40
 
 uniform float uHeightScale;
 
 uniform sampler2D sHeightMap;
+uniform sampler2D sNormalMap;
+uniform sampler2D sDiffuseMap;
 
 
 
@@ -334,26 +348,27 @@ void main()
 		normalize(vNormal)
 		);
 
+	vec3 parallaxDirection = normalize(vParallaxDirection);
 
 
 
-	float limit = -length(vParallaxDirection.xy) / vParallaxDirection.z;
+	float limit = length(parallaxDirection.xy);
 	limit *= uHeightScale;
 
 
-	vec2 offset = normalize(vParallaxDirection.xy);
+	vec2 offset = (parallaxDirection.xy);
 	vec2 maxOffset = offset * limit;
 
-	float cRayHeight = 1.0;
+	float cRayHeight = uHeightScale;
 	vec2 cOffset = vec2(0.0);
 	vec2 lOffset = cOffset;
-	float cSampleHeight = 1.0;
-	float lSampleHeight = 1.0;
+	float cSampleHeight = uHeightScale;
+	float lSampleHeight = uHeightScale;
 	float step = 1.0 / float(NUM_SAMPLES);
 
 	for(int cSample = 0; cSample < NUM_SAMPLES; cSample++)
 	{
-		cSampleHeight = texture2D(sHeightMap, vTexture + cOffset).r;
+		cSampleHeight = texture2D(sHeightMap, vTexture + cOffset).r * uHeightScale;
 		if(cSampleHeight > cRayHeight)
 		{
 			float d1, d2;
@@ -365,15 +380,31 @@ void main()
 		}
 		else
 		{
-
+			cRayHeight -= step * uHeightScale;
+			lOffset = cOffset;
+			cOffset += step * offset * uHeightScale;
+			lSampleHeight = cSampleHeight;
 		}
-
 	}
 
+	vec2 adjustedTexture = vTexture + cOffset;
 
 
+	vec3 normal = texture2D(sNormalMap, adjustedTexture).rgb * 2.0 - 1.0;
+	normal = normalize(tbn * normal);
+	
 
-	gl_FragColor = vec4(0);
+	float light = min(max(dot(normal, normalize(vec3(1))), 0.0) + 0.1, 1.0);
+	vec3 color = texture2D(sDiffuseMap, adjustedTexture).rgb;
+
+	gl_FragColor.rgb = color * light;
+	gl_FragColor.rgb = pow(gl_FragColor.rgb, vec3(1.0 / 2.2));
+
+	//gl_FragColor.rgb = vTangent * 0.5 + 0.5;
+	//gl_FragColor.rgb = normalize( * tbn) * 0.5 + 0.5;
+
+
+	//gl_FragColor.rgb = normal * 0.5 + 0.5;
 }
 
 --- END ---

@@ -9,7 +9,7 @@ function LoadShaders(glslPath, bindings, oncomplete) {
                     vertex: sources[name].vertex,
                     fragment: sources[name].fragment,
                     binds: bindings
-                }, false); //Change to 'true' to allow mutable.
+                }, true); //Change to 'true' to allow mutable.
                 programs[name].name = name;
             }
         }

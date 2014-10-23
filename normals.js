@@ -72,6 +72,23 @@ var scene = (function(scene) {
         this.noMappingShader = assets.glsl.NoMapping;
         this.normalMappingShader = assets.glsl.NormalMapping;
         this.parallaxMappingShader = assets.glsl.ParallaxMapping;
+        scene.occlusionMappingShader = assets.glsl.ReliefMapping;
+
+
+
+        Object.keys(scene.model.objects).forEach(function(key) {
+            var object = scene.model.objects[key];
+            object.meshes.forEach(function(mesh) {
+                Object.keys(mesh.material.textures).forEach(function(key) {
+                    var texture = mesh.material.textures[key];
+                    gl.bindTexture(gl.TEXTURE_2D, texture);
+                    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+                    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+                })
+            });
+        });
+
+        gl.bindTexture(gl.TEXTURE_2D, null);
 
         this.gbufferPass = {
             init: function() {
@@ -294,6 +311,8 @@ var scene = (function(scene) {
             var shader = scene.parallaxMappingShader;
             shader.use();
 
+            shader.uniform.uCameraLocation = scene.camera.position;
+
             Object.keys(scene.options).forEach(function(key) {
                 if (shader.uniform.hasOwnProperty(key)) {
                     shader.uniform[key] = scene.options[key];
@@ -307,6 +326,7 @@ var scene = (function(scene) {
                 object.meshes.forEach(function(mesh) {
                     shader.sampler.sNormalMap = mesh.material.textures.normal;
                     shader.sampler.sHeightMap = mesh.material.textures.height;
+                    shader.sampler.sDiffuseMap = mesh.material.textures.diffuse;
                     mesh.Draw();
                 });
             });
@@ -337,6 +357,28 @@ var scene = (function(scene) {
                     mesh.Draw();
                 });
             });
+        },
+        drawOcclusionMapped: function() {
+            var shader = scene.occlusionMappingShader;
+            shader.use();
+            shader.uniform.uCameraLocation = scene.camera.position;
+            Object.keys(scene.options).forEach(function(key) {
+                if (shader.uniform.hasOwnProperty(key)) {
+                    shader.uniform[key] = scene.options[key];
+                }
+            });
+            scene.applyCameraToProgram(shader);
+            scene.model.BindBuffers();
+            Object.keys(scene.model.objects).forEach(function(key) {
+                var object = scene.model.objects[key];
+                scene.applyCameraToObject(shader, object);
+                object.meshes.forEach(function(mesh) {
+                    shader.sampler.sDiffuseMap = mesh.material.textures.diffuse;
+                    shader.sampler.sNormalMap = mesh.material.textures.normal;
+                    shader.sampler.sHeightMap = mesh.material.textures.height;
+                    mesh.Draw();
+                });
+            })
         },
         drawMirror: function(drawerer) {
             env.program.uniform.uMirror = 0;
