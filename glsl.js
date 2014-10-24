@@ -1,42 +1,45 @@
-"use strict"
 var loader = (function(loader) {
+    "use strict";
     var watchDog = 20;
 
-    var patchInclude = function(map, section) {
+    var buildSource = function(sectionMap, section, defines) {
         if (watchDog === 0) {
-            console.log("Recursion too deep could not load ", section.title);
-            return;
+            console.log("Recursion limit reached during section", section);
+            return [];
         }
 
         watchDog -= 1;
-        section.source = section.includes.reduce(function(source, include) {
-            if (typeof map[include] === "undefined") {
-                console.log("Unknown section ", include);
-            } else {
-                var target = map[include];
-                if (target.needsPatching) {
-                    patchInclude(map, target);
+        var getInclude = function(source) {
+            var i = source.split("#include ");
+            if (i.length === 1)
+                return false;
+            return i[1];
+        };
+
+
+        section = sectionMap[section];
+        var source = section.source.reduce(function(acc, source) {
+            var inc = getInclude(source);
+            if (inc) {
+                var t = sectionMap[inc];
+                if (typeof t === "undefined") {
+                    console.log("Unknown segment include ", inc);
+                    return null;
                 }
-                source = target.source + "\n" + source;
+                console.log(inc);
+                return acc.concat(buildSource(sectionMap, inc));
+            } else {
+                return acc.concat(source);
             }
-            return source;
-        }, section.source);
 
-        section.needsPatching = false;
+        }, defines || []);
         watchDog += 1;
-        return section;
-    };
-
-    var patchIncludes = function(sectionMap) {
-        Object.keys(sectionMap).forEach(function(key) {
-            patchInclude(sectionMap, sectionMap[key]);
-        });
-        return sectionMap;
+        return source;
     };
 
     var parseGroups = function(source) {
-        var parseSection = function(source) {
-            var source = source.split("\n").map(function(str) {
+        return source.split("---").map(function(source) {
+            source = source.split("\n").map(function(str) {
                 return str.trim();
             }).filter(function(str) {
                 if (str.length === 0)
@@ -44,44 +47,23 @@ var loader = (function(loader) {
                 return true;
             });
 
-            if (source.length < 2) {
-                console.log("Malformed source group?");
-                return false;
-            }
-
             var title = source.shift();
-
-            var parts = source.reduce(function(obj, current) {
-                if (current == "")
-                    return obj;
-
-                if (current.indexOf("#include") === 0) {
-                    obj.includes.push(current.split("#include ")[1]);
-                } else {
-                    obj.source += current + "\n";
-                }
-
-                return obj;
-            }, {
-                includes: [],
-                source: "",
-            });
 
             return {
                 title: title,
-                includes: parts.includes,
-                needsPatching: parts.includes.length > 0,
-                source: parts.source
+                source: source
             };
-        }
-
-        return source.split("---").map(parseSection).reduce(function(obj, v) {
+        }).filter(function(v) {
+            return v.source.length >= 2;
+        }).reduce(function(obj, v) {
             if (v) {
                 obj[v.title] = v;
             }
             return obj;
         }, {});
     };
+
+
     var createShader = function(type, source) {
         var shader = gl.createShader(type);
         gl.shaderSource(shader, source);
@@ -98,7 +80,7 @@ var loader = (function(loader) {
         gl.attachShader(program, fragment);
 
         binds.forEach(function(bind) {
-            gl.bindAttribLocation(program, bind[1], bind[0])
+            gl.bindAttribLocation(program, bind[1], bind[0]);
         });
 
         gl.linkProgram(program);
@@ -175,7 +157,7 @@ var loader = (function(loader) {
                 gl.activeTexture(gl.TEXTURE0 + textureSlot);
                 gl.bindTexture(gl.TEXTURE_2D, v);
             }
-        }
+        };
     };
     uniformPropertyGenerators[gl.SAMPLER_CUBE] = function(textureSlot) {
         return {
@@ -183,7 +165,7 @@ var loader = (function(loader) {
                 gl.activeTexture(gl.TEXTURE0 + textureSlot);
                 gl.bindTexture(gl.TEXTURE_CUBE_MAP, v);
             }
-        }
+        };
     };
 
 
@@ -240,7 +222,6 @@ var loader = (function(loader) {
         ["aTexture", 4]
     ];
 
-    //10 - > k - > i - > 10 - > i - > k - > 10
     var glsl = {
         load: function(path) {
             var promise = new Promise(function(accept, reject) {
@@ -251,12 +232,13 @@ var loader = (function(loader) {
                 req.responseType = "text";
                 req.onload = function(e) {
                     var text = req.responseText;
-                    var groups = patchIncludes(parseGroups(text));
+                    var groups = parseGroups(text);
 
                     var sources = Object.assign(Object.create(sourcesProto), {
                         groups: groups,
                         name: name,
-                        type: "glsl"
+                        type: "glsl",
+                        defines: []
                     });
 
                     accept(sources);
@@ -269,6 +251,28 @@ var loader = (function(loader) {
         }
     };
 
+
+    var prepend = function(value) {
+        return function(str) {
+            return value + str;
+        };
+    };
+
+    var append = function(value) {
+        return function(str) {
+            return str + value;
+        };
+    };
+
+    var buildDefine = function(define) {
+        if (Array.isArray(define)) {
+            if (define[1] === null) {
+                return "";
+            }
+            return define.join(" ");
+        }
+        return define;
+    };
 
     var programProto = {
         use: function() {
@@ -284,16 +288,19 @@ var loader = (function(loader) {
                 return false;
             }
 
+            var defines = Object.keys(this.defines).map(function(key) {
+                return [key, this.defines[key]];
+            }).map(buildDefine);
 
-            vertex = createShader(gl.VERTEX_SHADER, this.groups[vertex].source);
-            if (vertex === false)
-                return false;
+            var vDefines = ["VERTEX_SHADER true"].concat(defines).map(prepend("#define "));
+            var fDefines = ["FRAGMENT_SHADER true"].concat(defines).map(prepend("#define "));
 
-            fragment = createShader(gl.FRAGMENT_SHADER, this.groups[fragment].source);
-            if (fragment === false)
-                return false;
 
-            var program = createProgram(vertex, fragment, globalBindings);
+            var program = createProgram(
+                createShader(gl.VERTEX_SHADER, buildSource(this.groups, vertex, vDefines).join("\n")),
+                createShader(gl.FRAGMENT_SHADER, buildSource(this.groups, fragment, fDefines).join("\n")),
+                globalBindings);
+
             var programUniforms = uniformProperties(program);
             return Object.assign(Object.create(programProto), {
                 id: program,

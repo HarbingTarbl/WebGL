@@ -1,5 +1,6 @@
-"use strict"
 var scene = (function(scene) {
+    "use strict";
+
     var clickWithin = function(x, y, e) {
         e = e.getBoundingClientRect();
         return !((x < e.left) || (y < e.top) || (x > (e.right)) || (y > (e.bottom)));
@@ -68,9 +69,9 @@ var scene = (function(scene) {
 
         this.camera = cameras.turnstile.create(75 * 3.14 / 180, env.canvas.clientWidth / env.canvas.clientHeight, 0.1, 100);
         this.camera.distance = [0, 0, 6];
-        this.camera.verticalAngle = 45 / 180 * 3.14
+        this.camera.verticalAngle = 45 / 180 * 3.14;
 
-        this.noMappingShader = assets.glsl.normals.createProgram("NoMapping.Vertex", "NoMapping.Fragment");
+        this.noMappingShader = assets.glsl.normals.createProgram("All.Vertex", "NoMapping.Fragment");
         this.normalMappingShader = assets.glsl.NormalMapping;
         this.parallaxMappingShader = assets.glsl.ParallaxMapping;
         scene.occlusionMappingShader = assets.glsl.ReliefMapping;
@@ -85,7 +86,7 @@ var scene = (function(scene) {
                     gl.bindTexture(gl.TEXTURE_2D, texture);
                     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
                     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-                })
+                });
             });
         });
 
@@ -214,7 +215,7 @@ var scene = (function(scene) {
                 amount = amount / 180 * 3.14;
                 return function() {
                     func(this.position, this.position, env.zero, amount * scene.frame.timeDelta);
-                }
+                };
             };
             var chain = function() {
                 args = Array.apply(null, arguments);
@@ -379,7 +380,7 @@ var scene = (function(scene) {
                     shader.sampler.sHeightMap = mesh.material.textures.height;
                     mesh.Draw();
                 });
-            })
+            });
         },
         drawMirror: function(drawerer) {
             env.program.uniform.uMirror = 0;

@@ -20,6 +20,8 @@ var readonly = function(obj) {
     };
 };
 
+
+
 if (!Object.assign) {
     Object.defineProperty(Object, "assign", {
         enumerable: false,

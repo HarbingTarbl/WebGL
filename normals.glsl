@@ -1,9 +1,12 @@
---- attributes
-attribute vec3 aPosition;
-attribute vec3 aNormal;
-attribute vec3 aTangent;
-attribute vec3 aBitangent;
-attribute vec2 aTexture;
+--- depth packing
+vec4 pack_depth(const in float depth)
+{
+    const vec4 bit_shift = vec4(256.0*256.0*256.0, 256.0*256.0, 256.0, 1.0);
+    const vec4 bit_mask  = vec4(0.0, 1.0/256.0, 1.0/256.0, 1.0/256.0);
+    vec4 res = fract(depth * bit_shift);
+    res -= res.xxyz * bit_mask;
+    return res;
+}
 
 
 --- varyings
@@ -12,7 +15,7 @@ varying vec3 vTangent;
 varying vec3 vBitangnet;
 varying vec3 vNormal;
 varying vec2 vTexture;
-
+varying vec3 vEye;
 
 --- camera uniforms
 uniform mat3 uNormalMatrix;
@@ -20,10 +23,28 @@ uniform mat4 uModelMatrix;
 uniform mat4 uProjectionViewMatrix;
 uniform vec3 uCameraLocation;
 
+---textures
+uniform sampler2D sHeightMap;
+uniform sampler2D sDiffuseMap;
+uniform sampler2D sNormalMap;
 
+--- height uniforms
+uniform float uHeightScale;
+uniform float uHeightBias;
 
---- NoMapping.Vertex
-#include attributes
+--- common.frag
+precision highp float;
+#include varyings
+#include textures
+#include height uniforms
+
+--- All.Vertex
+attribute vec3 aPosition;
+attribute vec3 aNormal;
+attribute vec3 aTangent;
+attribute vec3 aBitangent;
+attribute vec2 aTexture;
+
 #include varyings
 #include camera uniforms
 
@@ -35,207 +56,47 @@ void main()
 {
 	gl_Position = vec4(aPosition, 1.0);
 	gl_Position = uModelMatrix * gl_Position;
+
+	vTexture = aTexture;
+	vPosition = gl_Position.xyz;
 	vNormal = uNormalMatrix * aNormal;
 	vTangent = uNormalMatrix * aTangent;
 	vBitangnet = uNormalMatrix * aBitangent;
 
-	if(uMirror == 1)
-	{
-		vec3 toMirror = (gl_Position.xyz - uMirrorPosition);
-		gl_Position.xyz = gl_Position.xyz - 2.0 * dot(toMirror, uMirrorNormal) * uMirrorNormal;
-	}
+
+	vEye = (uCameraLocation - vPosition) * mat3(vTangent, vBitangnet, vNormal);
 	
-	vPosition = gl_Position.xyz;
-
-
-	vTexture = aTexture;
 	gl_Position = uProjectionViewMatrix * gl_Position;
 }
-//Todo be able to break shaders into bits.
-//Another todo. WebGL shader compiler
+
+
 --- NoMapping.Fragment
-precision highp float;
+#include common.frag
 
-varying vec3 vPosition;
-varying vec3 vTangent;
-varying vec3 vBitangnet;
-varying vec3 vNormal;
-varying vec2 vTexture;
-
-uniform float uViewNear;
-uniform float uViewFar;
-
-uniform sampler2D sAlbedo;
-
-//Courtesy of .... Some Dude On The Inter-Tubes.
-vec4 pack_depth(const in float depth)
-{
-    const vec4 bit_shift = vec4(256.0*256.0*256.0, 256.0*256.0, 256.0, 1.0);
-    const vec4 bit_mask  = vec4(0.0, 1.0/256.0, 1.0/256.0, 1.0/256.0);
-    vec4 res = fract(depth * bit_shift);
-    res -= res.xxyz * bit_mask;
-    return res;
-}
 
 void main()
 {
-	float ff = gl_FrontFacing ? 1.0 : 1.0;
-	vec3 normal = normalize(vNormal) * ff;
+	vec3 normal = normalize(vNormal);
 	gl_FragColor.rgb = vec3(min(max(dot(normal, normalize(vec3(1))), 0.0) + 0.1, 1.0));
 	gl_FragColor.rgb = pow(gl_FragColor.rgb, vec3(1.0 / 2.2));
 }
 
----NormalMapping
-attribute vec3 aPosition;
-attribute vec3 aNormal;
-attribute vec3 aTangent;
-attribute vec3 aBitangent;
-attribute vec2 aTexture;
-
-varying vec3 vPosition;
-varying vec3 vTangent;
-varying vec3 vBitangnet;
-varying vec3 vNormal;
-varying vec2 vTexture;
-
-uniform mat3 uNormalMatrix;
-uniform mat4 uModelMatrix;
-uniform mat4 uProjectionViewMatrix;
-
-uniform vec3 uMirrorPosition;
-uniform vec3 uMirrorNormal;
-uniform int uMirror;
-
-void main()
-{
-	gl_Position = vec4(aPosition, 1.0);
-	gl_Position = uModelMatrix * gl_Position;
-
-	if(uMirror == 1)
-	{
-		vec3 toMirror = (gl_Position.xyz - uMirrorPosition);
-		gl_Position.xyz = gl_Position.xyz - 2.0 * dot(toMirror, uMirrorNormal) * uMirrorNormal;
-	}
-	
-	vPosition = gl_Position.xyz;
-	vNormal = uNormalMatrix * aNormal;
-	vTangent = uNormalMatrix * aTangent;
-	vBitangnet = uNormalMatrix * aBitangent;
-	vTexture = aTexture;
-	gl_Position = uProjectionViewMatrix * gl_Position;
-}
 
 
-precision highp float;
-
-uniform sampler2D sNormalMap;
-
-varying vec3 vPosition;
-varying vec3 vTangent;
-varying vec3 vBitangnet;
-varying vec3 vNormal;
-varying vec2 vTexture;
-
-//Courtesy of .... Some Dude On The Inter-Tubes.
-vec4 pack_depth(const in float depth)
-{
-    const vec4 bit_shift = vec4(256.0*256.0*256.0, 256.0*256.0, 256.0, 1.0);
-    const vec4 bit_mask  = vec4(0.0, 1.0/256.0, 1.0/256.0, 1.0/256.0);
-    vec4 res = fract(depth * bit_shift);
-    res -= res.xxyz * bit_mask;
-    return res;
-}
-
+--- NormalMapping.Fragment
+#include common.frag
 
 void main()
 {
 	mat3 tbn = mat3(normalize(vTangent), normalize(vBitangnet), normalize(vNormal));
-	vec3 normal = normalize(texture2D(sNormalMap, vTexture).rgb * 2.0 - 1.0);
-	normal = tbn * normal;
+	vec3 normal = normalize(texture2D(sNormalMap, vTexture)) * 2.0 - 1.0;
 
-
-	gl_FragColor.rgb = vec3(min(max(dot(normal, normalize(vec3(1))), 0.0) + 0.0, 1.0));
-	gl_FragColor.rgb = pow(gl_FragColor.rgb, vec3(1.0 / 2.2));
+	gl_FragColor.rgb = (tbn * normal).rgb * 0.5 + 0.5;
 }
 
 
----ParallaxMapping
-attribute vec3 aPosition;
-attribute vec3 aNormal;
-attribute vec3 aTangent;
-attribute vec3 aBitangent;
-attribute vec2 aTexture;
-
-varying vec3 vPosition;
-varying vec3 vTangent;
-varying vec3 vBitangnet;
-varying vec3 vNormal;
-varying vec2 vTexture;
-varying vec3 vEyeTangent;
-
-
-uniform vec3 uCameraLocation;
-uniform mat3 uNormalMatrix;
-uniform mat4 uModelMatrix;
-uniform mat4 uProjectionViewMatrix;
-
-
-uniform vec3 uMirrorPosition;
-uniform vec3 uMirrorNormal;
-uniform int uMirror;
-
-void main()
-{
-	gl_Position = vec4(aPosition, 1.0);
-	gl_Position = uModelMatrix * gl_Position;
-	
-	vPosition = gl_Position.xyz;
-
-	if(uMirror == 1)
-	{
-		vec3 toMirror = (gl_Position.xyz - uMirrorPosition);
-		gl_Position.xyz = gl_Position.xyz - 2.0 * dot(toMirror, uMirrorNormal) * uMirrorNormal;
-	}
-
-
-	vNormal = uNormalMatrix * aNormal;
-	vTangent = uNormalMatrix * aTangent;
-	vBitangnet = uNormalMatrix * aBitangent;
-
-	vEyeTangent = (vPosition - uCameraLocation) * mat3(vTangent, vBitangnet, vNormal);
-
-	vTexture = aTexture;
-	gl_Position = uProjectionViewMatrix * gl_Position;
-}
-
-
-precision highp float;
-
-varying vec3 vPosition;
-varying vec3 vTangent;
-varying vec3 vBitangnet;
-varying vec3 vNormal;
-varying vec2 vTexture;
-varying vec3 vEyeTangent;
-
-uniform int uOffsetLimiting;
-uniform float uHeightScale;
-uniform float uHeightBias;
-
-uniform sampler2D sNormalMap;
-uniform sampler2D sHeightMap;
-uniform sampler2D sDiffuseMap;
-
-
-//Courtesy of .... Some Dude On The Inter-Tubes.
-vec4 pack_depth(const in float depth)
-{
-    const vec4 bit_shift = vec4(256.0*256.0*256.0, 256.0*256.0, 256.0, 1.0);
-    const vec4 bit_mask  = vec4(0.0, 1.0/256.0, 1.0/256.0, 1.0/256.0);
-    vec4 res = fract(depth * bit_shift);
-    res -= res.xxyz * bit_mask;
-    return res;
-}
+---ParallaxMapping.Fragment
+#include common.frag
 
 void main()
 {
@@ -263,81 +124,11 @@ void main()
 }
 
 
---- ReliefMapping
-attribute vec3 aPosition;
-attribute vec3 aNormal;
-attribute vec3 aTangent;
-attribute vec3 aBitangent;
-attribute vec2 aTexture;
-
-varying vec3 vPosition;
-varying vec3 vTangent;
-varying vec3 vBitangnet;
-varying vec3 vNormal;
-varying vec2 vTexture;
-
-varying vec3 vParallaxDirection;
-varying vec3 vParallaxLight;
-
-
-
-uniform vec3 uCameraLocation;
-uniform mat3 uNormalMatrix;
-uniform mat4 uModelMatrix;
-uniform mat4 uProjectionViewMatrix;
-
-
-uniform vec3 uMirrorPosition;
-uniform vec3 uMirrorNormal;
-uniform int uMirror;
-
-void main()
-{
-	gl_Position.xyz = aPosition;
-	gl_Position.w = 1.0;
-	gl_Position = uModelMatrix * gl_Position;
-
-	if(uMirror == 1)
-	{
-		vec3 toMirror = (gl_Position.xyz - uMirrorPosition);
-		gl_Position.xyz = gl_Position.xyz - 2.0 * dot(toMirror, uMirrorNormal) * uMirrorNormal;
-	}
-
-	vPosition = gl_Position.xyz;
-	vTangent = uNormalMatrix * aTangent;
-	vBitangnet = uNormalMatrix * aBitangent;
-	vNormal = uNormalMatrix * aNormal;
-
-
-	mat3 toTangent = mat3(vTangent, vBitangnet, vNormal);
-
-	vParallaxDirection = (uCameraLocation - vPosition) * toTangent;
-	vParallaxLight = normalize(vec3(1)) * toTangent;
-
-	vTexture = aTexture;
-	gl_Position = uProjectionViewMatrix * gl_Position;
-}
-
-precision highp float;
-
-varying vec3 vPosition;
-varying vec3 vTangent;
-varying vec3 vBitangnet;
-varying vec3 vNormal;
-varying vec2 vTexture;
-
-varying vec3 vParallaxDirection;
-varying vec3 vParallaxLight;
-
-#define NUM_SAMPLES 40
-
-uniform float uHeightScale;
-
-uniform sampler2D sHeightMap;
-uniform sampler2D sNormalMap;
-uniform sampler2D sDiffuseMap;
-
-
+--- ReliefMapping.Fragment
+#ifndef NUM_SAMPLES
+#define NUM_SAMPLES 32
+#endif
+#include common.frag
 
 float cross2d(vec2 x, vec2 y)
 {
@@ -353,7 +144,7 @@ void main()
 		normalize(vNormal)
 		);
 
-	vec3 parallaxDirection = normalize(vParallaxDirection);
+	vec3 parallaxDirection = normalize(vEye);
 
 
 
