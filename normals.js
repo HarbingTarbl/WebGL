@@ -65,15 +65,15 @@ var scene = (function(scene) {
 
         console.log("O", assets.glsl);
         this.cube = assets.model.cube;
-        scene.model = scene.cube;
+        scene.model = assets.model.plane;
 
         this.camera = cameras.turnstile.create(75 * 3.14 / 180, env.canvas.clientWidth / env.canvas.clientHeight, 0.1, 100);
         this.camera.distance = [0, 0, 6];
         this.camera.verticalAngle = 45 / 180 * 3.14;
 
         this.noMappingShader = assets.glsl.normals.createProgram("All.Vertex", "NoMapping.Fragment");
-        this.normalMappingShader = assets.glsl.NormalMapping;
-        this.parallaxMappingShader = assets.glsl.ParallaxMapping;
+        this.normalMappingShader = assets.glsl.normals.createProgram("All.Vertex", "NormalMapping.Fragment");
+        this.parallaxMappingShader = assets.glsl.normals.createProgram("All.Vertex", "ParallaxMapping.Fragment");
         scene.occlusionMappingShader = assets.glsl.ReliefMapping;
 
 
@@ -314,6 +314,7 @@ var scene = (function(scene) {
             shader.use();
 
             shader.uniform.uCameraLocation = scene.camera.position;
+            shader.uniform.uLightDir = vec3.normalize(vec3.create(), [3, 1, 1]);
 
             Object.keys(scene.options).forEach(function(key) {
                 if (shader.uniform.hasOwnProperty(key)) {
@@ -336,6 +337,7 @@ var scene = (function(scene) {
         drawNormalMapped: function() {
             var shader = scene.normalMappingShader;
             shader.use();
+            shader.uniform.uLightDir = vec3.normalize(vec3.create(), [3, 1, 1]);
             scene.applyCameraToProgram(shader);
             scene.model.BindBuffers();
             Object.keys(scene.model.objects).forEach(function(key) {
@@ -343,19 +345,27 @@ var scene = (function(scene) {
                 scene.applyCameraToObject(shader, object);
                 object.meshes.forEach(function(mesh) {
                     shader.sampler.sNormalMap = mesh.material.textures.normal;
+                    shader.sampler.sHeightMap = mesh.material.textures.height;
+                    shader.sampler.sDiffuseMap = mesh.material.textures.diffuse;
                     mesh.Draw();
                 });
             });
 
         },
         drawNoMapping: function() {
+            var shader = scene.noMappingShader;
             scene.noMappingShader.use();
+            scene.noMappingShader.uniform.uLightDir = vec3.normalize(vec3.create(), [3, 1, 1]);
+
             scene.applyCameraToProgram(scene.noMappingShader);
             scene.model.BindBuffers();
             Object.keys(scene.model.objects).forEach(function(key) {
                 var object = scene.model.objects[key];
                 scene.applyCameraToObject(scene.noMappingShader, object);
                 object.meshes.forEach(function(mesh) {
+                    shader.sampler.sDiffuseMap = mesh.material.textures.diffuse;
+                    shader.sampler.sNormalMap = mesh.material.textures.normal;
+                    shader.sampler.sHeightMap = mesh.material.textures.height;
                     mesh.Draw();
                 });
             });
@@ -441,7 +451,7 @@ var scene = (function(scene) {
     return {
         onload: function() {
             loader.load([
-                "assets/cube/cube.model",
+                "assets/plane/plane.model",
                 "normals.glsl",
             ]).then(loaded.bind(Object.create(potato))).catch(function(a) {
                 var err = a.stack;

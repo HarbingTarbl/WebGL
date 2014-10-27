@@ -65,7 +65,7 @@
                 0.80000001192092896
             ],
             "textures": {
-                "diffuse": "dfxdfy.png",
+                "diffuse": "color.jpg",
                 "normal" : "normal.png",
                 "occlusion": "ao.png",
                 "height" : "height.png"

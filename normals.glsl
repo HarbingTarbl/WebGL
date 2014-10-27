@@ -11,11 +11,9 @@ vec4 pack_depth(const in float depth)
 
 --- varyings
 varying vec3 vPosition;
-varying vec3 vTangent;
-varying vec3 vBitangnet;
-varying vec3 vNormal;
 varying vec2 vTexture;
-varying vec3 vEye;
+varying vec3 vEyeTangent;
+varying vec3 vLightTangent;
 
 --- camera uniforms
 uniform mat3 uNormalMatrix;
@@ -52,6 +50,8 @@ uniform vec3 uMirrorPosition;
 uniform vec3 uMirrorNormal;
 uniform int uMirror;
 
+uniform vec3 uLightDir;
+
 void main()
 {
 	gl_Position = vec4(aPosition, 1.0);
@@ -59,13 +59,15 @@ void main()
 
 	vTexture = aTexture;
 	vPosition = gl_Position.xyz;
-	vNormal = uNormalMatrix * aNormal;
-	vTangent = uNormalMatrix * aTangent;
-	vBitangnet = uNormalMatrix * aBitangent;
+	vec3 normal = normalize(uNormalMatrix * aNormal);
+	vec3 tangent = normalize(uNormalMatrix * aTangent);
+	vec3 bitangent = normalize(uNormalMatrix * aBitangent);
 
+	mat3 tbn = mat3(tangent, bitangent, normal);
 
-	vEye = (uCameraLocation - vPosition) * mat3(vTangent, vBitangnet, vNormal);
-	
+	vEyeTangent = (uCameraLocation - vPosition) * tbn;
+	vLightTangent = uLightDir * tbn;
+
 	gl_Position = uProjectionViewMatrix * gl_Position;
 }
 
@@ -76,8 +78,12 @@ void main()
 
 void main()
 {
-	vec3 normal = normalize(vNormal);
-	gl_FragColor.rgb = vec3(min(max(dot(normal, normalize(vec3(1))), 0.0) + 0.1, 1.0));
+	vec3 normal = vec3(0,0,1);
+	vec3 color = pow(texture2D(sDiffuseMap, vTexture).rgb, vec3(2.2));
+	float NdL = max(dot(normal, normalize(vLightTangent)), 0.0);
+
+
+	gl_FragColor.rgb = color * min(NdL + 0.1, 1.0);
 	gl_FragColor.rgb = pow(gl_FragColor.rgb, vec3(1.0 / 2.2));
 }
 
@@ -88,10 +94,12 @@ void main()
 
 void main()
 {
-	mat3 tbn = mat3(normalize(vTangent), normalize(vBitangnet), normalize(vNormal));
-	vec3 normal = normalize(texture2D(sNormalMap, vTexture)) * 2.0 - 1.0;
+	vec3 normal = normalize(texture2D(sNormalMap, vTexture).rgb) * 2.0 - 1.0;
+	vec3 color = pow(texture2D(sDiffuseMap, vTexture).rgb, vec3(2.2));
+	float NdL = max(dot(normal, normalize(vLightTangent)), 0.0);
 
-	gl_FragColor.rgb = (tbn * normal).rgb * 0.5 + 0.5;
+	gl_FragColor.rgb = color * min(NdL + 0.0, 1.0);
+	gl_FragColor.rgb = pow(gl_FragColor.rgb, vec3(1.0 / 2.2));
 }
 
 
@@ -100,27 +108,21 @@ void main()
 
 void main()
 {
-	mat3 tbn = mat3(normalize(vTangent), normalize(vBitangnet), normalize(vNormal));
-	float height = texture2D(sHeightMap, vTexture).r * uHeightScale;
-	vec3 eyeTangent = normalize(-vEyeTangent);
+	float height = texture2D(sHeightMap, vTexture).r * uHeightScale + uHeightBias;
 
-	gl_FragColor.rgb = vec3(max(dot(eyeTangent, tbn[2] * tbn), 0.0));
-	return;
+	vec3 eyeParallax = (vEyeTangent);
 
+	vec2 offsetTexture = vTexture + eyeParallax.xy * height;
 
 
-	vec2 offsetTexture = vTexture + height * eyeTangent.xy;
+	vec3 normal = normalize(texture2D(sNormalMap, offsetTexture).rgb) * 2.0 - 1.0;
+	vec3 color = pow(texture2D(sDiffuseMap, offsetTexture).rgb, vec3(2.2));
+	float NdL = max(dot(normal, normalize(vLightTangent)), 0.0);
 
-	vec3 normal = normalize(texture2D(sNormalMap, offsetTexture).rgb * 2.0 - 1.0);
-	normal = tbn * normal;
-
-
-
-	float light = min(max(dot(normal, normalize(vec3(1))), 0.0) + 0.1, 1.0);
-	vec3 color = texture2D(sDiffuseMap, offsetTexture).rgb;
-
-	gl_FragColor.rgb = color * light;
+	gl_FragColor.rgb = color * min(NdL + 0.0, 1.0);
 	gl_FragColor.rgb = pow(gl_FragColor.rgb, vec3(1.0 / 2.2));
+
+
 }
 
 

@@ -137,19 +137,35 @@ var loader = (function(loader) {
             }
         };
     };
-    uniformPropertyGenerators[gl.FLOAT] = function(location) {
-        return {
-            set: function(v) {
-                gl.uniform1fv(location, v);
-            }
-        };
+    uniformPropertyGenerators[gl.FLOAT] = function(location, size) {
+        if (size > 1) {
+            return {
+                set: function(v) {
+                    gl.uniform1fv(location, v);
+                }
+            };
+        } else {
+            return {
+                set: function(v) {
+                    gl.uniform1f(location, v);
+                }
+            };
+        }
     };
-    uniformPropertyGenerators[gl.INT] = function(location) {
-        return {
-            set: function(v) {
-                gl.uniform1iv(location, v);
-            }
-        };
+    uniformPropertyGenerators[gl.INT] = function(location, size) {
+        if (size > 1) {
+            return {
+                set: function(v) {
+                    gl.uniform1iv(location, v);
+                }
+            };
+        } else {
+            return {
+                set: function(v) {
+                    gl.uniform1i(location, v);
+                }
+            };
+        }
     };
     uniformPropertyGenerators[gl.SAMPLER_2D] = function(textureSlot) {
         return {
@@ -194,7 +210,7 @@ var loader = (function(loader) {
                 case gl.FLOAT_VEC2:
                 case gl.FLOAT:
                 case gl.INT:
-                    uniforms[realName] = gen(uniform.location);
+                    uniforms[realName] = gen(uniform.location, uniform.size);
                     break;
                 case gl.SAMPLER_2D:
                     gl.uniform1i(uniform.location, currentTextureId);
