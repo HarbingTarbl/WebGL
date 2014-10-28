@@ -136,7 +136,7 @@ void main()
 #include common.frag
 
 #ifndef NUM_SAMPLES
-#define NUM_SAMPLES 64
+#define NUM_SAMPLES 128
 #endif
 
 void main()
@@ -176,8 +176,10 @@ void main()
 #endif
 
 #ifndef NUM_SEARCHES
-#define NUM_SEARCHES 16
+#define NUM_SEARCHES 32
 #endif
+
+#define EPSILON 0.0001
 
 
 #define SAMPLE_DELTA 1.0 / float(NUM_SAMPLES)
@@ -186,8 +188,9 @@ void main()
 {
 	vec2 viewRay = vEyeTangent.xy / vEyeTangent.z;
 	vec2 deltaTexture = uHeightScale * viewRay * SAMPLE_DELTA;
-	vec2 currentTexture = vTexture;
-	float currentHeight = texture2D(sHeightMap, currentTexture).r;
+	vec2 offsetTexture = vTexture;
+
+	float currentHeight = texture2D(sHeightMap, offsetTexture).r;
 	float currentLayer = 0.0;
 
 	for(int i = 0; i < NUM_SAMPLES; i++)
@@ -196,13 +199,13 @@ void main()
 			break;
 
 		currentLayer += SAMPLE_DELTA;
-		currentTexture -= deltaTexture;
-		currentHeight = texture2D(sHeightMap, currentTexture).r;
+		offsetTexture -= deltaTexture;
+		currentHeight = texture2D(sHeightMap, offsetTexture).r;
 	}
 
 	vec2 dt = deltaTexture / 2.0;
-	vec2 dh = SAMPLE_DELTA / 2.0;
-	currentTexture += dt;
+	float dh = SAMPLE_DELTA / 2.0;
+	offsetTexture += dt;
 	currentHeight -= dh;
 
 	for(int i = 0; i < NUM_SEARCHES; i++)
@@ -210,22 +213,22 @@ void main()
 		dt /= 2.0;
 		dh /= 2.0;
 
-		currentHeight = texture2D(sHeightMap, currentTexture).r;
+		currentHeight = texture2D(sHeightMap, offsetTexture).r;
+
 		if(currentHeight > currentLayer)
 		{
-			currentTexture -= deltaTexture;
-			currentHeight += SAMPLE_DELTA;
+			offsetTexture -= dt;
+			currentHeight += dh;
 		}
 		else
 		{
-			currentTexture += deltaTexture;
-			currentHeight -= SAMPLE_DELTA;
+			offsetTexture += dt;
+			currentHeight -= dh;
 		}
 	}
 
 
-
-	vec2 offsetTexture = currentTexture;
 	#include FlippyFloppyBlippyBloppy
 }
+
 

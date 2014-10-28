@@ -73,6 +73,7 @@ var scene = (function(scene) {
         this.normalMappingShader = assets.glsl.normals.createProgram("All.Vertex", "NormalMapping.Fragment");
         this.parallaxMappingShader = assets.glsl.normals.createProgram("All.Vertex", "ParallaxMapping.Fragment");
         this.steepParallaxShader = assets.glsl.normals.createProgram("All.Vertex", "SteepParallax.Fragment");
+        this.reliefMappingShader = assets.glsl.normals.createProgram("All.Vertex", "ReliefMapping.Fragment");
 
         scene.occlusionMappingShader = assets.glsl.ReliefMapping;
 
@@ -85,8 +86,8 @@ var scene = (function(scene) {
                     var texture = mesh.material.textures[key];
                     gl.bindTexture(gl.TEXTURE_2D, texture);
                     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-                    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE );
-                    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+                    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT );
+                    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
                 });
             });
         });
@@ -336,6 +337,9 @@ var scene = (function(scene) {
         },
         drawSteepParallax: function(){
             scene.standardDraw(scene.steepParallaxShader);
+        },
+        drawReliefMapped: function(){
+            scene.standardDraw(scene.reliefMappingShader);
         },
         drawParallaxMapped: function() {
             var shader = scene.parallaxMappingShader;
