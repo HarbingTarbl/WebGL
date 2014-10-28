@@ -62,8 +62,6 @@ var scene = (function(scene) {
         scene.options_window = document.querySelector("#options");
 
 
-
-        console.log("O", assets.glsl);
         this.cube = assets.model.cube;
         scene.model = assets.model.plane;
 
@@ -74,6 +72,8 @@ var scene = (function(scene) {
         this.noMappingShader = assets.glsl.normals.createProgram("All.Vertex", "NoMapping.Fragment");
         this.normalMappingShader = assets.glsl.normals.createProgram("All.Vertex", "NormalMapping.Fragment");
         this.parallaxMappingShader = assets.glsl.normals.createProgram("All.Vertex", "ParallaxMapping.Fragment");
+        this.steepParallaxShader = assets.glsl.normals.createProgram("All.Vertex", "SteepParallax.Fragment");
+
         scene.occlusionMappingShader = assets.glsl.ReliefMapping;
 
 
@@ -84,7 +84,8 @@ var scene = (function(scene) {
                 Object.keys(mesh.material.textures).forEach(function(key) {
                     var texture = mesh.material.textures[key];
                     gl.bindTexture(gl.TEXTURE_2D, texture);
-                    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+                    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+                    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE );
                     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
                 });
             });
@@ -308,6 +309,33 @@ var scene = (function(scene) {
         applyCameraToObject: function(program, object) {
             program.uniform.uModelMatrix = object.transform;
             program.uniform.uNormalMatrix = object.normalMatrix;
+        },
+        standardDraw: function(shader){
+            shader.use();
+
+            shader.uniform.uCameraLocation = scene.camera.position;
+            shader.uniform.uLightDir = vec3.normalize(vec3.create(), [3, 1, 1]);
+
+            Object.keys(scene.options).forEach(function(key) {
+                if (shader.uniform.hasOwnProperty(key)) {
+                    shader.uniform[key] = scene.options[key];
+                }
+            });
+            scene.applyCameraToProgram(shader);
+            scene.model.BindBuffers();
+            Object.keys(scene.model.objects).forEach(function(key) {
+                var object = scene.model.objects[key];
+                scene.applyCameraToObject(shader, object);
+                object.meshes.forEach(function(mesh) {
+                    shader.sampler.sNormalMap = mesh.material.textures.normal;
+                    shader.sampler.sHeightMap = mesh.material.textures.height;
+                    shader.sampler.sDiffuseMap = mesh.material.textures.diffuse;
+                    mesh.Draw();
+                });
+            });
+        },
+        drawSteepParallax: function(){
+            scene.standardDraw(scene.steepParallaxShader);
         },
         drawParallaxMapped: function() {
             var shader = scene.parallaxMappingShader;

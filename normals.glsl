@@ -61,7 +61,7 @@ void main()
 	vPosition = gl_Position.xyz;
 	vec3 normal = normalize(uNormalMatrix * aNormal);
 	vec3 tangent = normalize(uNormalMatrix * aTangent);
-	vec3 bitangent = normalize(uNormalMatrix * aBitangent);
+	vec3 bitangent = cross(normal, tangent);
 
 	mat3 tbn = mat3(tangent, bitangent, normal);
 
@@ -71,6 +71,14 @@ void main()
 	gl_Position = uProjectionViewMatrix * gl_Position;
 }
 
+---FlippyFloppyBlippyBloppy
+	vec3 normal = normalize(texture2D(sNormalMap, offsetTexture).rgb) * 2.0 - 1.0;
+	vec3 color = pow(texture2D(sDiffuseMap, offsetTexture).rgb, vec3(2.2));
+	float NdL = max(dot(normal, normalize(vLightTangent)), 0.0);
+
+	gl_FragColor.rgb = color * min(NdL + 0.0, 1.0);
+	gl_FragColor.rgb = pow(gl_FragColor.rgb, vec3(1.0 / 2.2));
+
 
 --- NoMapping.Fragment
 #include common.frag
@@ -79,6 +87,7 @@ void main()
 void main()
 {
 	vec3 normal = vec3(0,0,1);
+
 	vec3 color = pow(texture2D(sDiffuseMap, vTexture).rgb, vec3(2.2));
 	float NdL = max(dot(normal, normalize(vLightTangent)), 0.0);
 
@@ -93,9 +102,10 @@ void main()
 #include common.frag
 
 void main()
-{
-	vec3 normal = normalize(texture2D(sNormalMap, vTexture).rgb) * 2.0 - 1.0;
-	vec3 color = pow(texture2D(sDiffuseMap, vTexture).rgb, vec3(2.2));
+{	
+	vec2 offsetTexture = vTexture;
+	vec3 normal = normalize(texture2D(sNormalMap, offsetTexture).rgb) * 2.0 - 1.0;
+	vec3 color = pow(texture2D(sDiffuseMap, offsetTexture).rgb, vec3(2.2));
 	float NdL = max(dot(normal, normalize(vLightTangent)), 0.0);
 
 	gl_FragColor.rgb = color * min(NdL + 0.0, 1.0);
@@ -112,96 +122,110 @@ void main()
 
 	vec3 eyeParallax = (vEyeTangent);
 
-	vec2 offsetTexture = vTexture + eyeParallax.xy * height;
+	vec2 offsetTexture = vTexture - (eyeParallax.xy / eyeParallax.z)* height;
 
 
-	vec3 normal = normalize(texture2D(sNormalMap, offsetTexture).rgb) * 2.0 - 1.0;
-	vec3 color = pow(texture2D(sDiffuseMap, offsetTexture).rgb, vec3(2.2));
-	float NdL = max(dot(normal, normalize(vLightTangent)), 0.0);
-
-	gl_FragColor.rgb = color * min(NdL + 0.0, 1.0);
-	gl_FragColor.rgb = pow(gl_FragColor.rgb, vec3(1.0 / 2.2));
+#include FlippyFloppyBlippyBloppy
 
 
+
+}
+
+
+--- SteepParallax.Fragment
+#include common.frag
+
+#ifndef NUM_SAMPLES
+#define NUM_SAMPLES 64
+#endif
+
+void main()
+{
+	vec2 eyeTangent = vEyeTangent.xy / vEyeTangent.z;
+
+	float layerDelta = 1.0 / float(NUM_SAMPLES);
+
+
+	vec2 texDelta = uHeightScale * eyeTangent * layerDelta;
+
+	vec2 offsetTexture = vTexture;
+	float textureHeight = texture2D(sHeightMap, vTexture).r;
+	float layerHeight = 0.0;
+
+
+	for(int i = 0; i < NUM_SAMPLES; i++)
+	{
+		if(layerHeight > textureHeight)
+			break;
+
+
+		layerHeight += layerDelta;
+		offsetTexture -= texDelta;
+		textureHeight = texture2D(sHeightMap, offsetTexture).r;
+	}
+
+#include FlippyFloppyBlippyBloppy
 }
 
 
 --- ReliefMapping.Fragment
+#include common.frag
+
 #ifndef NUM_SAMPLES
 #define NUM_SAMPLES 32
 #endif
-#include common.frag
 
-float cross2d(vec2 x, vec2 y)
-{
-	return x.x * y.y - x.y * y.x;
-}
+#ifndef NUM_SEARCHES
+#define NUM_SEARCHES 16
+#endif
 
+
+#define SAMPLE_DELTA 1.0 / float(NUM_SAMPLES)
 
 void main()
 {
-	mat3 tbn = mat3(
-		normalize(vTangent),
-		normalize(vBitangnet),
-		normalize(vNormal)
-		);
+	vec2 viewRay = vEyeTangent.xy / vEyeTangent.z;
+	vec2 deltaTexture = uHeightScale * viewRay * SAMPLE_DELTA;
+	vec2 currentTexture = vTexture;
+	float currentHeight = texture2D(sHeightMap, currentTexture).r;
+	float currentLayer = 0.0;
 
-	vec3 parallaxDirection = normalize(vEye);
-
-
-
-	float limit = length(parallaxDirection.xy);
-	limit *= uHeightScale;
-
-
-	vec2 offset = (parallaxDirection.xy);
-	vec2 maxOffset = offset * limit;
-
-	float cRayHeight = uHeightScale;
-	vec2 cOffset = vec2(0.0);
-	vec2 lOffset = cOffset;
-	float cSampleHeight = uHeightScale;
-	float lSampleHeight = uHeightScale;
-	float step = 1.0 / float(NUM_SAMPLES);
-
-	for(int cSample = 0; cSample < NUM_SAMPLES; cSample++)
+	for(int i = 0; i < NUM_SAMPLES; i++)
 	{
-		cSampleHeight = texture2D(sHeightMap, vTexture + cOffset).r * uHeightScale;
-		if(cSampleHeight > cRayHeight)
-		{
-			float d1, d2;
-			d1 = cSampleHeight - cRayHeight;
-			d2 = (cRayHeight + step) - lSampleHeight;
-			float r = d1 / (d1 + d2);
-			cOffset = r * lOffset + (1.0 - r) * cOffset;
+		if(currentLayer >= currentHeight)
 			break;
+
+		currentLayer += SAMPLE_DELTA;
+		currentTexture -= deltaTexture;
+		currentHeight = texture2D(sHeightMap, currentTexture).r;
+	}
+
+	vec2 dt = deltaTexture / 2.0;
+	vec2 dh = SAMPLE_DELTA / 2.0;
+	currentTexture += dt;
+	currentHeight -= dh;
+
+	for(int i = 0; i < NUM_SEARCHES; i++)
+	{
+		dt /= 2.0;
+		dh /= 2.0;
+
+		currentHeight = texture2D(sHeightMap, currentTexture).r;
+		if(currentHeight > currentLayer)
+		{
+			currentTexture -= deltaTexture;
+			currentHeight += SAMPLE_DELTA;
 		}
 		else
 		{
-			cRayHeight -= step * uHeightScale;
-			lOffset = cOffset;
-			cOffset += step * offset * uHeightScale;
-			lSampleHeight = cSampleHeight;
+			currentTexture += deltaTexture;
+			currentHeight -= SAMPLE_DELTA;
 		}
 	}
 
-	vec2 adjustedTexture = vTexture + cOffset;
 
 
-	vec3 normal = texture2D(sNormalMap, adjustedTexture).rgb * 2.0 - 1.0;
-	normal = normalize(tbn * normal);
-	
-
-	float light = min(max(dot(normal, normalize(vec3(1))), 0.0) + 0.1, 1.0);
-	vec3 color = texture2D(sDiffuseMap, adjustedTexture).rgb;
-
-	gl_FragColor.rgb = color * light;
-	gl_FragColor.rgb = pow(gl_FragColor.rgb, vec3(1.0 / 2.2));
-
-	//gl_FragColor.rgb = vTangent * 0.5 + 0.5;
-	//gl_FragColor.rgb = normalize( * tbn) * 0.5 + 0.5;
-
-
-	//gl_FragColor.rgb = normal * 0.5 + 0.5;
+	vec2 offsetTexture = currentTexture;
+	#include FlippyFloppyBlippyBloppy
 }
 
