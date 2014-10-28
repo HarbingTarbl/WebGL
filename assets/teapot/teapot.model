@@ -1,0 +1,150 @@
+{
+    "attributes": {
+        "bitangent": {
+            "index": 3,
+            "offset": 36,
+            "size": 3
+        },
+        "normal": {
+            "index": 1,
+            "offset": 12,
+            "size": 3
+        },
+        "position": {
+            "index": 0,
+            "offset": 0,
+            "size": 3
+        },
+        "tangent": {
+            "index": 2,
+            "offset": 24,
+            "size": 3
+        },
+        "uv0": {
+            "index": 4,
+            "offset": 48,
+            "size": 2
+        }
+    },
+    "data": "teapot.modeldata",
+    "indexCount": 47112,
+    "indexOffset": 713272,
+    "indexSize": 2,
+    "materials": {
+        "Default": {
+            "ambientColor": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "bumpScale": 4.5865900035815588e-41,
+            "diffuseColor": [
+                0.63999998569488525,
+                0.63999998569488525,
+                0.63999998569488525
+            ],
+            "emissiveColor": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "gloss": 0.0,
+            "ior": 1.0,
+            "name": "Default",
+            "reflectiveColor": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "shadingModel": "unknown",
+            "shininess": 384.313720703125,
+            "shininessStrength": 0.0,
+            "specularColor": [
+                0.5,
+                0.5,
+                0.5
+            ],
+            "textures": {}
+        },
+        "default": {
+            "ambientColor": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "bumpScale": 1.1094623775217369e27,
+            "diffuseColor": [
+                0.80000001192092896,
+                0.80000001192092896,
+                0.80000001192092896
+            ],
+            "emissiveColor": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "gloss": 0.0,
+            "ior": 1.5,
+            "name": "default",
+            "reflectiveColor": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "shadingModel": "unknown",
+            "shininess": 31.372547149658203,
+            "shininessStrength": 0.0,
+            "specularColor": [
+                0.20000000298023224,
+                0.20000000298023224,
+                0.20000000298023224
+            ],
+            "textures": {
+                "diffuse": "default.png"
+            }
+        }
+    },
+    "meshes": [
+        {
+            "indexCount": 36456,
+            "indexOffset": 0,
+            "material": "default",
+            "name": ""
+        },
+        {
+            "indexCount": 10656,
+            "indexOffset": 72912,
+            "material": "Default",
+            "name": ""
+        }
+    ],
+    "name": "teapot",
+    "objects": {
+        "teapot": {
+            "meshes": [
+                0, 1
+            ],
+            "transform": [
+                1.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                1.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                1.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                1.0
+            ]
+        }
+    },
+    "vertexCount": 12737,
+    "vertexOffset": 0,
+    "vertexSize": 56
+}

@@ -30,7 +30,7 @@ var env = (function(env) {
             canvas.height = canvas.clientHeight;
             this.gl = this.canvas.getContext("experimental-webgl", {
                 antialias: false,
-                stencil: false,
+                stencil: true,
                 depth: true,
                 alpha: false,
                 premultipliedAlpha: false,
