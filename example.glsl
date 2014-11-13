@@ -1,5 +1,0 @@
---- Something.Fragment
-
-
---- Something.Vertex
-
