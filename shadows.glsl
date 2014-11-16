@@ -109,21 +109,42 @@ void main()
 	gl_FragColor = vec4(1); //Using Post-Projection depth anyway soooo
 }
 
---- CreateLight.Vertex
+
+--- ReflectionVaryings
+varying vec3 vWorld;
+varying vec3 vNormal;
+varying vec2 vTexture;
+
+--- CreateReflection.Vertex
 attribute vec3 aPosition;
+attribute vec3 aNormal;
+attribute vec2 aTexture;
 
 uniform mat4 uViewProjection;
 uniform mat4 uModel;
 
+#include ReflectionVaryings
+
 void main()
 {
-
+	gl_Position = uModel * vec4(aPosition, 1.0);
+	vWorld = gl_Position.xyz;
+	vNormal = uModel * vec4(aPosition, 0.0);
+	vTexture = aTexture;
+	gl_Position = uViewProjection * gl_Position;
 }
 
 
---- CreateLight.Frag
+--- CreateReflection.Frag
+#extension GL_EXT_draw_buffers : require
+
+uniform sampler2D sDiffuse;
+
+#include ReflectionVaryings
 
 void main()
 {
-
+	gl_FragData[0].xyz = vWorld;
+	gl_FragData[1].xyz = vNormal;
+	gl_FragData[2].rgb = texture2D(sDiffuse, vTexture).rgb;
 }
