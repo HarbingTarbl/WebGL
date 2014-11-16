@@ -60,19 +60,19 @@ var env = (function(env) {
         },
         createTexture: function(func) {
             var texId = this.gl.createTexture();
-            return this.textures[texId] = func(texId);
+            return func(texId);
         },
         createBuffer: function(func) {
             var bufId = this.gl.createBuffer();
-            return this.buffers[bufId] = func(bufId);
+            return func(bufId);
         },
         createFramebuffer: function(func) {
             var fbId = this.gl.createFramebuffer();
-            return this.framebuffers[fbId] = func(fbId);
+            return func(fbId);
         },
         createRenderbuffer: function(func) {
             var rbId = this.gl.createRenderbuffer();
-            return this.renderbuffers[rbId] = func(rbId);
+            return func(rbId);
         },
         activateProgram: function(program) {
 

@@ -38,53 +38,7 @@
 
 <body onload="scene.onload();">
     <canvas id="canvas"></canvas>
-    <div id="options">
-        <div id="options_render">
-            <label for="renderMode">Normals Mode</label>
-            <input name="normalsMode" list="normalsMode" id="normalsMode-input">
-            <br />
-            <datalist id="normalsMode">
-                <option value="No Mapping" data-mode="drawNoMapping" data-option="none" />
-                <option value="Normal Mapping" data-mode="drawNormalMapped" data-option="normal" />
-                <option value="Parallax Mapping" data-mode="drawParallaxMapped" data-option="parallax" />
-                <option value="Steep Parallax" data-mode="drawSteepParallax" data-option="parallax" />
-                <option value="Relief Mapping" data-mode="drawReliefMapped" data-option="parallax" />
-                <option value="Occlusion Mapping" data-mode="drawOcclusionMapped" data-option="parallax" />
-            </datalist>
-            <label for="enableMirror">Mirror</label>
-            <input name="enableMirror" id="enableMirror" type="checkbox" onclick="scene.onInput(this)">
-            <br />
-            <label for="mirrorPosition">Mirror Position:</label>
-            <input name="mirrorPosition" id="mirrorPosition" value="4, 0, 0" oninput="scene.onInput(this)">
-            <br />
-            <label for="mirrorNormal">Mirror Normal:</label>
-            <input name="mirrorNormal" id="mirrorNormal" value="1, 0, 0" oninput="scene.onInput(this)">
-            <br />
-            <label for="cameraPosition">Camera Origin:</label>
-            <input name="cameraPosition" id="cameraPosition" value="0, 0, 3" oninput="scene.onInput(this)">
-            <br />
-        </div>
-        <div data-tag="options_none" class="hidden_option">
 
-        </div>
-        <div data-tag="options_normal" class="hidden_option">
-
-        </div>
-        <div data-tag="options_parallax" class="hidden_option">
-            <label for="uOffsetLimiting">Offset Limiting</label>
-            <input name="uOffsetLimiting" type="checkbox" oninput="scene.onInput(this)" data-uniform="uOffsetLimiting" />
-            <br />
-
-            <label for="uHeightBias">Height Bias</label>
-            <input name="uHeightBias" type="input" min="-2" max="2" step="0.1" data-uniform="uHeightBias" oninput="scene.onInput(this)" />
-            <br />
-
-            <label for="uHeightScale">Height Scale</label>
-            <input name="uHeightScale" type="input" min="0" max="4" step="0.1" data-uniform="uHeightScale" oninput="scene.onInput(this)" />
-            <br />
-        </div>
-    </div>
-    <div style="clear:both"></div>
     <script type="text/javascript" src="gl-matrix.js"></script>
     <script type="text/javascript" src="jquery.js"></script>
     <script type="text/javascript" src="ShaderProgram.js"></script>
@@ -101,9 +55,7 @@
     <script type="text/javascript" src="model.js"></script>
     <script type="text/javascript" src="glsl.js"></script>
     <script type="text/javascript" src="loader.js"></script>
-    <script type="text/javascript" src="normals.js"></script>
-
-
+    <script type="text/javascript" src="shadows.js"></script>
 </body>
 
 </html>
