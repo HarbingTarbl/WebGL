@@ -45,6 +45,44 @@ var scene = (function(scene) {
     	});
     };
 
+    var createReflectionFB = function(size){
+    	return env.createFramebuffer(function(fb){
+    		var fobj = {
+    			id: fb,
+    			use: function(){
+    				gl.bindFramebuffer(gl.FRAMEBUFFER, this.id),
+    				gl.viewport(0, 0, size, size);
+    				gl.colorMask(true, true, true, true);
+    				gl.depthMask(true);
+    			}
+    		};
+
+    		gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
+    		var makeTex = function(attach, type, format){
+    			var setupTex = function(texId){
+    				gl.bindTexture(gl.TEXTURE_2D, texId);
+    				gl.texImage2D(gl.TEXTURE_2D, 0, format, size, size, 0, format, type, null);
+    				gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    				gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    				gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    				gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+
+    				return texId;
+    			};
+
+    			return function(texId) {
+    				var texObj = setupTex(texId);
+    				gl.framebufferTexture2D(gl.FRAMEBUFFER, attach, gl.TEXTURE_2D, texId, 0);
+    				gl.bindTexture(gl.TEXTURE_2D, null);
+    				return texObj;
+    			};
+    		};
+
+    		return fobj;
+    	});
+    };
+
     var cache = {
     	t_mat2d : mat2d.create(),
     	t_mat3 : mat3.create(),
