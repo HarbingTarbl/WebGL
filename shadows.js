@@ -1,6 +1,25 @@
 var scene = (function(scene) {
     "use strict";
 
+	var makeTexAttachment = function(size, attach, type, format){
+		var setupTex = function(texId){
+			gl.bindTexture(gl.TEXTURE_2D, texId);
+			gl.texImage2D(gl.TEXTURE_2D, 0, format, size, size, 0, format, type, null);
+			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+			return texId;
+		};
+
+		return function(texId) {
+			var texObj = setupTex(texId);
+			gl.framebufferTexture2D(gl.FRAMEBUFFER, attach, gl.TEXTURE_2D, texId, 0);
+			gl.bindTexture(gl.TEXTURE_2D, null);
+			return texObj;
+		};
+	};
+
     var createShadowFB = function(size){
     	return env.createFramebuffer(function(fb){
     		var fobj = {
@@ -14,29 +33,8 @@ var scene = (function(scene) {
     		};
 
     		gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
-    		var makeTex = function(attach, type, format){
-    			var setupTex = function(texId){
-    				gl.bindTexture(gl.TEXTURE_2D, texId);
-    				gl.texImage2D(gl.TEXTURE_2D, 0, format, size, size, 0, format, type, null);
-    				gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-    				gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-    				gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    				gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-
-
-    				return texId;
-    			};
-
-    			return function(texId) {
-    				var texObj = setupTex(texId);
-    				gl.framebufferTexture2D(gl.FRAMEBUFFER, attach, gl.TEXTURE_2D, texId, 0);
-    				gl.bindTexture(gl.TEXTURE_2D, null);
-    				return texObj;
-    			};
-    		};
-
-    		fobj.ctex = env.createTexture(makeTex(gl.COLOR_ATTACHMENT0, gl.UNSIGNED_BYTE, gl.RGB));
-    		fobj.dtex = env.createTexture(makeTex(gl.DEPTH_ATTACHMENT, gl.UNSIGNED_INT, gl.DEPTH_COMPONENT));
+    		fobj.ctex = env.createTexture(makeTexAttachment(size, gl.COLOR_ATTACHMENT0, gl.UNSIGNED_BYTE, gl.RGB));
+    		fobj.dtex = env.createTexture(makeTexAttachment(size, gl.DEPTH_ATTACHMENT, gl.UNSIGNED_INT, gl.DEPTH_COMPONENT));
     		var complete = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
     		if(complete != gl.FRAMEBUFFER_COMPLETE)
     			console.log("Shadow Framebuffer Incomplete");
@@ -57,27 +55,19 @@ var scene = (function(scene) {
     			}
     		};
 
+			var ext = env.glext;
     		gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
-    		var makeTex = function(attach, type, format){
-    			var setupTex = function(texId){
-    				gl.bindTexture(gl.TEXTURE_2D, texId);
-    				gl.texImage2D(gl.TEXTURE_2D, 0, format, size, size, 0, format, type, null);
-    				gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-    				gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-    				gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    				gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    		fobj.ptex = env.createTexture(makeTexAttachment(size, ext.COLOR_ATTACHMENT0_WEBGL, gl.FLOAT, gl.RGBA));
+    		fobj.ntex = env.createTexture(makeTexAttachment(size, ext.COLOR_ATTACHMENT1_WEBGL, gl.FLOAT, gl.RGBA));
+    		fobj.ftex = env.createTexture(makeTexAttachment(size, ext.COLOR_ATTACHMENT2_WEBGL, gl.FLOAT, gl.RGBA));
+    		fobj.dtex = env.createTexture(makeTexAttachment(size, ext.DEPTH_ATTACHMENT, gl.UNSIGNED_INT, gl.DEPTH_COMPONENT));
 
+    		
+    		ext.drawBuffersWEBGL([ext.COLOR_ATTACHMENT0_WEBGL, ext.COLOR_ATTACHMENT1_WEBGL, ext.COLOR_ATTACHMENT2_WEBGL]);
 
-    				return texId;
-    			};
-
-    			return function(texId) {
-    				var texObj = setupTex(texId);
-    				gl.framebufferTexture2D(gl.FRAMEBUFFER, attach, gl.TEXTURE_2D, texId, 0);
-    				gl.bindTexture(gl.TEXTURE_2D, null);
-    				return texObj;
-    			};
-    		};
+    		var complete = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
+    		if(complete != gl.FRAMEBUFFER_COMPLETE)
+    			console.log("Reflection Shadow Framebuffer Incomplete");
 
     		return fobj;
     	});
