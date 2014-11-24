@@ -9,7 +9,7 @@ var env = (function(env) {
         var re = /((?:OES)|(?:WEBKIT_WEBGL)|(?:WEBGL)|(?:ANGLE)|(?:EXT))_(.+)/;
         exts.forEach(function(ext) {
             var extl = env.gl.getExtension(ext);
-            if (extl != null) {
+            if (extl !== null) {
                 var m = re.exec(ext);
                 if (typeof loaded[m[2]] === "undefined") {
                     loaded[m[2]] = extl;

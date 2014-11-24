@@ -36,13 +36,12 @@
     <title>WebGL</title>
 </head>
 
-<body onload="scene.onload();">
+<body onload="sceneHandler.init();">
     <canvas id="canvas"></canvas>
 
     <script type="text/javascript" src="gl-matrix.js"></script>
     <script type="text/javascript" src="jquery.js"></script>
     <script type="text/javascript" src="ShaderProgram.js"></script>
-    <script type="text/javascript" src="BoundingVolume.js"></script>
     <script type="text/javascript" src="ModelLoader.js"></script>
     <script type="text/javascript" src="ContentLoader.js"></script>
     <script type="text/javascript" src="Camera.js"></script>
@@ -55,7 +54,8 @@
     <script type="text/javascript" src="model.js"></script>
     <script type="text/javascript" src="glsl.js"></script>
     <script type="text/javascript" src="loader.js"></script>
-    <script type="text/javascript" src="shadows.js"></script>
+    <script type="text/javascript" src="sceneHandler.js"></script>
+    <script type="text/javascript" src="example.js"></script>
 </body>
 
 </html>
